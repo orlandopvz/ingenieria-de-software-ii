@@ -1,14 +1,13 @@
-import { GraduationCap, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router';
+import unisonLogo from '../../assets/unison-logo.png';
 export default function Footer() {
   return <footer className="site-footer">
     <div className="container pt-12 pb-8">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-8 border-b border-brand-cobalt/60">
         <div className="space-y-3">
           <span className="inline-flex items-center gap-2 font-heading text-2xl font-black text-white">
-            <span className="w-9 h-9 rounded-xl bg-brand-cobalt flex items-center justify-center text-brand-gold shadow-sm">
-              <GraduationCap size={21} aria-hidden="true" />
-            </span>
+            <img src={unisonLogo} width={36} height={36} className="shrink-0 object-contain" alt="Escudo de la Universidad de Sonora" />
             <span>Emprende<span className="text-brand-gold">Búho</span></span>
           </span>
           <p className="text-xs text-blue-200 leading-relaxed max-w-sm">
@@ -38,7 +37,7 @@ export default function Footer() {
         </div>
       </div>
       <div className="footer-content pt-6! pb-0!">
-        <span><GraduationCap size={18} className="text-brand-gold" aria-hidden="true" />EmprendeBúho</span>
+        <span><img src={unisonLogo} width={24} height={24} className="shrink-0 object-contain" alt="Escudo de la Universidad de Sonora" />EmprendeBúho</span>
         <p>De estudiantes, para estudiantes · Impulsado por la comunidad estudiantil de Sonora.</p>
         <small className="font-bold text-brand-gold">UNISON · Campus Hermosillo</small>
       </div>

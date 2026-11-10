@@ -317,16 +317,9 @@ svg { flex-shrink: 0; }
 .brand-symbol {
   width: 40px;
   height: 40px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, var(--color-navy), var(--color-cobalt));
-  color: var(--color-gold);
-  box-shadow: 0 4px 10px rgba(0, 56, 119, 0.25);
-  transition: transform 0.3s ease;
-}
-.brand:hover .brand-symbol {
-  transform: rotate(10deg) scale(1.08);
+  flex-shrink: 0;
+  display: block;
+  object-fit: contain;
 }
 .brand-name {
   font-weight: 900;

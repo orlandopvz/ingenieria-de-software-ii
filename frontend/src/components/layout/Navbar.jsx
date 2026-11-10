@@ -1,10 +1,11 @@
-import { GraduationCap, Heart, ArrowUpRight, LogOut, Sparkles } from 'lucide-react';
+import { Heart, ArrowUpRight, LogOut, Sparkles } from 'lucide-react';
 import { Link, NavLink } from 'react-router';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useFavorites } from '../../context/FavoritesContext.jsx';
 import Avatar from '../common/Avatar.jsx';
+import unisonLogo from '../../assets/unison-logo.png';
 export function Brand() {
-  return <Link to="/" className="brand group" aria-label="EmprendeBúho, inicio"><span className="brand-symbol"><GraduationCap size={24} strokeWidth={2} aria-hidden="true" /></span><span>Emprende<span className="brand-name">Búho</span><small>Sonora · Comunidad UNISON</small></span></Link>;
+  return <Link to="/" className="brand group" aria-label="EmprendeBúho, inicio"><img className="brand-symbol" src={unisonLogo} width={40} height={40} alt="Escudo de la Universidad de Sonora" /><span>Emprende<span className="brand-name">Búho</span><small>Sonora · Comunidad UNISON</small></span></Link>;
 }
 export default function Navbar({ searchSlot, filtersSlot }) {
   const auth = useAuth(); const { count } = useFavorites();
