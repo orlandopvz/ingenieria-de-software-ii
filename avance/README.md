@@ -20,7 +20,7 @@ Los cambios al contenido se hacen en `contenido_*.tex`, para conservar la misma 
 
 Se incluyen los seis PDF originales (el documento completo, el segundo avance y las cuatro bitácoras independientes) y el PDF de la evaluación. `fuentes_latex.zip` reúne los archivos `.tex` y este README para cargarlos juntos en Overleaf. Si se modifica el contenido, deben regenerarse los PDF y el ZIP.
 
-La evaluación usa las duraciones de la tabla original para sus rutas (62 y 60 días; diferencia de 2). Propone 1 día hábil para HU-05 y una puntuación de riesgo de 1.60. Mantiene tres historias en Por hacer. Sin confirmación adicional del equipo, registra un mínimo documentado de una revisión informal y un atraso mínimo de T1 de 10 días hábiles al 16 de octubre; no presenta estos valores como totales finales confirmados.
+La evaluación usa las duraciones de la tabla original para sus rutas (62 y 60 días; diferencia de 2). Propone 1 día hábil para HU-05 y una puntuación de riesgo de 1.60. Mantiene tres historias en Por hacer. Incorpora las confirmaciones del equipo: 27 revisiones informales (cinco semanas de cinco registros diarios más el 9 y 10 de noviembre) y cierre real de T1 el 19 de octubre. El retraso de T1 respecto al cierre planificado del 2 de octubre es de 11 días hábiles; no se presenta como retraso final de todo el proyecto.
 
 ## Decisiones confirmadas
 
@@ -38,7 +38,7 @@ Las fuentes originales solo contienen entradas de las semanas 1 y 2. Las activid
 
 Distribución propuesta: S3 cierra 8 historias; S4 agrega 12 (20 acumuladas); S5 agrega 10 (30 acumuladas); S6 agrega 6 (36 acumuladas). Las historias pendientes aparecen en análisis y preparación, sin contabilizarse como terminadas.
 
-El nuevo cronograma propone cerrar T1 el 20 de octubre, integrar módulos en paralelo y cerrar las cuatro historias abiertas entre el 16 y el 20 de noviembre. Se preserva del 23 al 27 de noviembre para aceptación final y entrega. Los días cuentan lunes a viernes, sin descontar feriados, como en la descripción proporcionada. Las ventanas de tareas se superponen y no se suman como esfuerzo.
+El cronograma incorpora el cierre real de T1 confirmado por el equipo el 19 de octubre, integra módulos en paralelo y propone cerrar las cuatro historias abiertas entre el 16 y el 20 de noviembre. Se preserva del 23 al 27 de noviembre para aceptación final y entrega. Los días cuentan lunes a viernes, sin descontar feriados, como en la descripción proporcionada. Las ventanas de tareas se superponen y no se suman como esfuerzo.
 
 La especificación técnica del repositorio aún conserva la versión antigua de HU-03. Esta carpeta documenta el cambio académico solicitado y señala esa diferencia; no modifica código ni afirma haber conciliado la especificación técnica. La conciliación se incluye en el cierre documental.
 
