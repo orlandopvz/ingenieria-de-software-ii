@@ -1,0 +1,285 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage{iftex}
+\ifPDFTeX\usepackage[utf8]{inputenc}\fi
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-nodecimaldot]{babel}
+\usepackage[margin=2.2cm,headheight=15pt]{geometry}
+\usepackage{lmodern,microtype,amsmath}
+\usepackage[table]{xcolor}
+\usepackage{array,booktabs,tabularx,enumitem,fancyhdr,hyperref}
+\definecolor{marino}{HTML}{002D62}
+\definecolor{dorado}{HTML}{F2A900}
+\hypersetup{colorlinks=true,linkcolor=marino,urlcolor=marino}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small EmprendeBúho}
+\fancyhead[R]{\small Planeación, seguimiento y control}
+\fancyfoot[C]{\thepage}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\setlength{\emergencystretch}{2em}
+\renewcommand{\arraystretch}{1.16}
+\setlist{nosep,leftmargin=*}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\hu}[1]{\mbox{HU-#1}}
+
+\begin{document}
+\begin{center}
+{\Large\bfseries Universidad de Sonora}\par
+{\large Ingeniería de Software II}\par
+\vspace{0.3cm}
+{\LARGE\bfseries\color{marino} Evaluación de planeación,\\
+seguimiento y control de proyectos}\par
+\vspace{0.25cm}
+{\large\bfseries Proyecto EmprendeBúho}\par
+Equipo \guillemotleft Descompuestos por Cholesky\guillemotright\par
+Profesor: Adrian Vazquez Osorio\par
+Hermosillo, Sonora, 10 de noviembre de 2026
+\end{center}
+\hrule
+
+\textbf{Base de las respuestas.} Se utiliza el \textit{Avance de Proyecto
+(Parte 01)} para historias, prioridades y red de tareas; las bitácoras
+originales para hechos documentados; y el último estado comunicado por el
+equipo para el tablero: 36 historias terminadas, una en proceso y tres
+pendientes. Las estimaciones nuevas y los ejemplos hipotéticos se identifican
+expresamente. Las bitácoras 3--6 son borradores de reconstrucción y no se usan
+para inventar reuniones realizadas ni fechas reales de cierre.
+
+\section*{1. Historia de usuario prioritaria (2 puntos)}
+\textbf{Seleccionamos la \hu{01}: solicitud de cuenta del emprendedor.}
+
+\begin{quote}
+Como emprendedor de la Universidad de Sonora, quiero solicitar una cuenta
+para registrar mi negocio en la plataforma.
+\end{quote}
+
+En el primer avance tiene \textbf{prioridad alta y complejidad alta}. La
+consideramos prioritaria porque habilita la incorporación del negocio y su
+posterior revisión; sin cuentas de emprendedores no puede alimentarse el
+directorio. El documento contiene otras historias de prioridad alta: esta
+selección se justifica por su papel habilitador, sin suponer que existe una
+clasificación original que la coloque por encima de todas las demás.
+
+\section*{2. Historia más corta y duración estimada (2 puntos)}
+\textbf{Elegimos la \hu{05}: clasificar el negocio por categoría.}
+
+\begin{quote}
+Como emprendedor, quiero asignar una categoría a mi negocio para facilitar
+que los clientes lo encuentren.
+\end{quote}
+
+\textbf{Duración estimada para esta evaluación: 1 día hábil.} Su complejidad
+original es baja. El alcance comprende seleccionar una categoría existente,
+guardar la asociación y revisar que se muestre correctamente. Se supone que
+ya existen la base de datos, las categorías y el formulario del perfil; no
+incluye desarrollar el módulo administrativo de categorías.
+
+La Parte 01 asigna días a tareas agrupadas, no a historias individuales. Por
+eso, un día es una \textbf{estimación propuesta}, no una duración registrada
+allí. Otras historias de complejidad baja pueden tener una duración similar;
+se elige HU-05 como una de las más cortas bajo este alcance.
+
+\section*{3. Historias en la columna Por hacer (2 puntos)}
+\textbf{Quedan 3 historias en Por hacer:}
+\begin{itemize}
+\item \hu{03}: acceso de clientes al sitio web sin registro, con el alcance
+corregido que sustituye la antigua foto de menú.
+\item \hu{10}: publicar la ubicación aproximada del negocio.
+\item \hu{23}: buscar emprendimientos por zona del campus.
+\end{itemize}
+
+La \hu{30}, ordenamiento de resultados, está \textbf{en proceso}, por lo que
+no se cuenta en Por hacer. La comprobación del total es:
+\[
+36\text{ terminadas}+1\text{ en proceso}+3\text{ por hacer}
+=\boxed{40\text{ historias}}.
+\]
+El conteo procede del estado comunicado por el equipo, no de una consulta en
+vivo a Trello. La modificación de HU-03 no aumenta el total de historias.
+
+\section*{4. Dos rutas dependientes y sus duraciones (2 puntos)}
+Para este cálculo utilizamos \textbf{las duraciones estimadas de la tabla de
+dependencias de la Parte 01}, en días hábiles de trabajo:
+
+\begin{center}\small
+\begin{tabularx}{\linewidth}{@{}lYrY@{}}
+\toprule
+Tarea & Actividad & Días & Predecesoras \\\midrule
+T1 & Arquitectura y base de datos & 5 & Ninguna \\
+T2 & Gestión de cuentas y autenticación & 10 & T1 \\
+T3 & Perfil del emprendimiento & 10 & T2 \\
+T4 & Catálogo y productos & 10 & T3 \\
+T5 & Visualización, búsqueda y filtros & 15 & T4 y T8 \\
+T6 & Interacción del consumidor & 5 & T5 \\
+T7 & Administración & 10 & T2 \\
+T8 & Ubicación del emprendimiento & 8 & T3 \\
+T9 & Pruebas y entrega & 7 & T6 y T7 \\\bottomrule
+\end{tabularx}
+\end{center}
+
+\textbf{Ruta A:} T1 $\rightarrow$ T2 $\rightarrow$ T3 $\rightarrow$ T4
+$\rightarrow$ T5 $\rightarrow$ T6 $\rightarrow$ T9.
+\[
+D_A=5+10+10+10+15+5+7=\boxed{62\text{ días}}.
+\]
+
+\textbf{Ruta B:} T1 $\rightarrow$ T2 $\rightarrow$ T3 $\rightarrow$ T8
+$\rightarrow$ T5 $\rightarrow$ T6 $\rightarrow$ T9.
+\[
+D_B=5+10+10+8+15+5+7=\boxed{60\text{ días}}.
+\]
+
+T5 requiere tanto T4 como T8. La suma de cada ruta describe una cadena de
+dependencias; T4 y T8 pueden realizarse en paralelo y no se suman una detrás
+de la otra.
+
+\section*{5. Ruta crítica y holgura (2 puntos)}
+\textbf{La ruta crítica es la ruta A, con 62 días.} La otra ruta completa
+de la red, T1 $\rightarrow$ T2 $\rightarrow$ T7 $\rightarrow$ T9, suma
+$5+10+10+7=32$ días, por lo que tampoco supera a A. Se supone la red de
+precedencias original, sin restricciones adicionales de recursos.
+
+La diferencia entre las dos rutas elegidas es:
+\[
+H=D_A-D_B=62-60=\boxed{2\text{ días hábiles}}.
+\]
+
+T4 y T8 comienzan después de T3: T4 dura 10 días y T8 dura 8. Por ello, T8
+puede demorarse hasta 2 días sin retrasar el inicio de T5, suponiendo que las
+demás duraciones se mantienen. Esta es la holgura de la rama alternativa;
+\textbf{las actividades compartidas de la ruta crítica no adquieren esa
+holgura}.
+
+\textbf{Consistencia del cálculo.} Las fechas del Gantt abarcan 45 días
+hábiles, pero no coinciden con todas las duraciones de su tabla de
+estimaciones. Los resultados 62, 60 y 2 pertenecen a esa tabla original;
+no describen las ventanas superpuestas del cronograma de recuperación de la
+Parte 02. No deben combinarse ambos modelos como si fueran uno solo.
+
+\section*{6. Probabilidad, impacto y puntuación de un riesgo (2 puntos)}
+\textbf{Riesgo:} retraso en la publicación de ubicación (HU-10), que impida
+cerrar la búsqueda por zona (HU-23) y la cercanía del ordenamiento (HU-30).
+
+Para esta evaluación asignamos los siguientes valores de juicio del equipo;
+no son frecuencias calculadas a partir de una serie histórica:
+\begin{itemize}
+\item Probabilidad: \textbf{40\,\%}, equivalente a $0.40$.
+\item Impacto: \textbf{4 de 5}, por afectar varias funciones y su integración.
+\end{itemize}
+\[
+\text{Puntuación}=P\times I=0.40\times4=\boxed{1.60}.
+\]
+El resultado es una puntuación de exposición al riesgo, no un porcentaje ni
+un número de días de retraso. Como respuesta, Orlando, Ángel y Leinad deben
+acordar el contrato de zonas, revisar los bloqueos diariamente e integrar
+primero HU-10, después HU-23 y finalmente la aceptación de cercanía de HU-30.
+
+\section*{7. Revisiones informales realizadas (2 puntos)}
+\textbf{Se puede acreditar al menos 1 revisión informal de avance.}
+La bitácora original de la semana 2, en la entrada del 14 de octubre,
+registra que el día anterior se realizó una reunión breve para revisar la
+carga y asignación de actividades. Por tanto, se identifica una revisión de
+seguimiento el \textbf{13 de octubre de 2026}.
+
+No se cuentan como revisiones adicionales las menciones de distintos
+integrantes que podrían referirse a la misma reunión, las reuniones
+solamente planeadas, la revisión formal del 5 de octubre ni las entradas
+reconstruidas de las semanas 3--6. \textbf{El total exacto de revisiones
+informales realizadas requiere confirmación del equipo}; una es el mínimo
+documentado, no una afirmación de que únicamente se haya realizado esa.
+
+\section*{8. Diseño hipotético de una revisión formal (4 puntos)}
+\textbf{Entregable elegido: módulo de gestión de cuentas y autenticación
+(T2)}, correspondiente a HU-01, HU-27, HU-28, HU-32 y HU-40 de la Parte 01.
+La siguiente es una propuesta de revisión, no una reunión ya realizada.
+
+\textbf{Objetivo:} determinar si la versión entregada cumple los criterios
+acordados de solicitud de cuenta, acceso por rol, notificaciones, recuperación
+de contraseña y baja de cuenta, y si puede aceptarse para la entrega final.
+
+\textbf{Participantes propuestos:} Denzel como moderador; Fernanda y Mario
+como representantes de los autores del módulo; Ángel y Orlando como
+revisores; y Leinad como secretario. Los autores de una parte específica
+explican su trabajo, pero no actúan como únicos aprobadores de esa parte.
+
+\textbf{Proceso de revisión formal:}
+\begin{enumerate}
+\item \textbf{Planear y convocar.} Definir fecha, duración, alcance,
+participantes y criterios de entrada. Identificar una versión fija del
+entregable y distribuirla junto con los requisitos y la lista de verificación.
+Los participantes confirman que el material está completo antes de reunirse.
+\item \textbf{Preparación individual.} Cada revisor inspecciona los flujos,
+formularios, validaciones y evidencia de pruebas. Registra por separado
+defectos, dudas y el requisito afectado, para no depender de una demostración
+improvisada durante la sesión.
+\item \textbf{Inspección moderada.} Recorrer escenarios preparados: solicitud
+válida e inválida; cuenta pendiente, aprobada, rechazada y suspendida;
+credenciales incorrectas; código de recuperación vencido; eliminación de
+cuenta; y restricción de rutas por rol. Verificar que las credenciales
+estudiantiles no se expongan públicamente.
+\item \textbf{Registrar hallazgos.} El secretario elabora el acta y la lista
+de defectos con identificador, descripción, severidad, evidencia,
+responsable y fecha de corrección. La sesión se centra en identificar
+problemas; las correcciones se realizan después.
+\item \textbf{Emitir un dictamen.} Aceptar, aceptar con correcciones menores
+o rechazar para retrabajo, según criterios definidos previamente. No se
+acepta el módulo si hay fallos críticos de acceso, privacidad o pérdida de
+datos, o si faltan criterios obligatorios.
+\item \textbf{Corregir y verificar.} Los autores atienden los hallazgos.
+Los revisores comprueban las correcciones y revisan que no introduzcan
+regresiones. Si el cambio es amplio, se programa otra sesión formal.
+\item \textbf{Cerrar y conservar evidencia.} El moderador registra el
+dictamen final, la versión aceptada y la aprobación de los participantes.
+Se archivan el acta, la lista de verificación, los resultados de pruebas
+y el seguimiento de defectos; después se actualiza el tablero.
+\end{enumerate}
+
+\textbf{Productos de la revisión:} acta formal, lista de defectos, acuerdos
+con responsables y fechas, evidencia de verificación y dictamen de aceptación.
+Estos registros permiten distinguirla de una conversación informal de avance.
+
+\section*{9. Desviación entre días planificados y reales (2 puntos)}
+\textbf{La desviación de plazo documentable es de al menos +10 días hábiles
+para T1 al corte del 16 de octubre de 2026.} Se utiliza un hito comparable,
+porque aún no hay una fecha real confirmada de terminación de todo el proyecto.
+
+El Gantt original fijó T1 del 28 de septiembre al 2 de octubre:
+\textbf{5 días hábiles}. Al 16 de octubre, la bitácora todavía registraba
+trabajo de arquitectura. Desde el inicio planificado del 28 de septiembre
+hasta ese corte habían transcurrido \textbf{15 días hábiles}, contando ambos
+extremos, lunes a viernes y sin descontar feriados.
+\[
+\Delta_{T1,\,16\,oct.}=15-5=\boxed{+10\text{ días hábiles}}.
+\]
+El signo positivo indica retraso respecto al plazo del hito. Como T1 aún no
+tenía un cierre acreditado en ese corte, es un retraso acumulado mínimo,
+no su duración final ni una demora final demostrada de todo el proyecto.
+Se cuenta desde el \textbf{inicio planificado} para incluir también el
+retraso de arranque; no equivale a quince jornadas efectivas trabajadas.
+
+Para el proyecto completo, la línea base comprende 45 días hábiles del
+28 de septiembre al 27 de noviembre. Al 10 de noviembre han transcurrido
+32 jornadas de ese calendario. Restar $32-45=-13$ \textbf{no demostraría un
+adelanto}: el proyecto sigue abierto y quedan días de su ventana prevista.
+La desviación final se calculará con la fecha real de entrega confirmada.
+Tampoco se usa el cierre propuesto del 20 de octubre de la Parte 02 como si
+fuera una fecha real ya validada.
+
+\section*{Referencias y datos pendientes de confirmar}
+\begin{itemize}
+\item \textit{Copia de AvanceDeProyecto (Parte 01)}, 25 de septiembre de
+2026: matriz de historias, prioridad, complejidad, tareas y dependencias.
+\item \textit{Bitácoras originales de las semanas 1 y 2}: investigación,
+seguimiento, reunión del 13 de octubre y retraso de arquitectura.
+\item Descripción del Gantt original: fechas del 28 de septiembre al
+27 de noviembre y diferencias respecto a las duraciones de la tabla.
+\item Estado comunicado por el equipo: 36 terminadas, HU-30 en proceso y
+HU-03, HU-10 y HU-23 pendientes; HU-03 corregida a acceso sin registro.
+\end{itemize}
+\textbf{Por confirmar antes de la entrega definitiva:} número total de
+revisiones informales y fecha real de cierre de T1. Las respuestas 7 y 9
+presentan lo que permiten acreditar los registros disponibles mientras
+se confirma esa información.
+
+\end{document}

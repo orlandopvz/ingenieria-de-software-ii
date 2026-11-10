@@ -12,12 +12,15 @@ Esta carpeta contiene el Avance de Proyecto (Parte 02), las bitácoras de las se
 | `bitacora_semana_4.tex` | 26–30 de octubre de 2026. |
 | `bitacora_semana_5.tex` | 2–6 de noviembre de 2026. |
 | `bitacora_semana_6.tex` | 9–13 de noviembre de 2026, borrador completo. |
+| `evaluacion_planeacion_seguimiento_control.tex` | Nueve respuestas de evaluación basadas en la Parte 01; archivo autónomo, con PDF compilado. |
 | `preambulo.tex` | Formato, portada, colores y tablas compartidos. |
 | `contenido_*.tex` | Texto editable compartido por las versiones independientes y la completa. |
 
 Los cambios al contenido se hacen en `contenido_*.tex`, para conservar la misma versión en todos los documentos. Los archivos principales solo reúnen portada y contenido.
 
-Se incluyen los seis PDF compilados: el documento completo, el segundo avance y las cuatro bitácoras independientes. `fuentes_latex.zip` reúne los archivos `.tex` y este README para cargarlos juntos en Overleaf. Si se modifica el contenido, deben regenerarse los PDF y el ZIP.
+Se incluyen los seis PDF originales (el documento completo, el segundo avance y las cuatro bitácoras independientes) y el PDF de la evaluación. `fuentes_latex.zip` reúne los archivos `.tex` y este README para cargarlos juntos en Overleaf. Si se modifica el contenido, deben regenerarse los PDF y el ZIP.
+
+La evaluación usa las duraciones de la tabla original para sus rutas (62 y 60 días; diferencia de 2). Propone 1 día hábil para HU-05 y una puntuación de riesgo de 1.60. Mantiene tres historias en Por hacer. Sin confirmación adicional del equipo, registra un mínimo documentado de una revisión informal y un atraso mínimo de T1 de 10 días hábiles al 16 de octubre; no presenta estos valores como totales finales confirmados.
 
 ## Decisiones confirmadas
 
@@ -59,6 +62,7 @@ tectonic bitacora_semana_3.tex
 tectonic bitacora_semana_4.tex
 tectonic bitacora_semana_5.tex
 tectonic bitacora_semana_6.tex
+tectonic evaluacion_planeacion_seguimiento_control.tex
 ```
 
 También se pueden cargar todos los `.tex` juntos en Overleaf y seleccionar `avance.tex` como documento principal, con compilador pdfLaTeX. No hacen falta imágenes, rutas absolutas ni archivos externos.
