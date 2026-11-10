@@ -20,7 +20,7 @@ Los cambios al contenido se hacen en `contenido_*.tex`, para conservar la misma 
 
 Se incluyen los seis PDF originales (el documento completo, el segundo avance y las cuatro bitácoras independientes) y el PDF de la evaluación. `fuentes_latex.zip` reúne los archivos `.tex` y este README para cargarlos juntos en Overleaf. Si se modifica el contenido, deben regenerarse los PDF y el ZIP.
 
-La evaluación usa las duraciones de la tabla original para sus rutas (62 y 60 días; diferencia de 2). Propone 1 día hábil para HU-05 y una puntuación de riesgo de 1.60. Mantiene tres historias en Por hacer. Incorpora las confirmaciones del equipo: 27 revisiones informales (cinco semanas de cinco registros diarios más el 9 y 10 de noviembre) y cierre real de T1 el 19 de octubre. El retraso de T1 respecto al cierre planificado del 2 de octubre es de 11 días hábiles; no se presenta como retraso final de todo el proyecto.
+La evaluación usa las duraciones de la tabla original para sus rutas (62 y 60 días; diferencia de 2). Propone 1 día hábil para HU-05. La probabilidad del riesgo es de 75 % y su impacto es 3 en una escala de 1 a 4; la puntuación es 0.75 × 3 = 2.25. Mantiene tres historias en Por hacer. Incorpora las confirmaciones del equipo: 27 revisiones informales (cinco semanas de cinco registros diarios más el 9 y 10 de noviembre) y cierre real de T1 el 19 de octubre. El retraso de T1 respecto al cierre planificado del 2 de octubre es de 11 días hábiles; no se presenta como retraso final de todo el proyecto.
 
 ## Decisiones confirmadas
 
