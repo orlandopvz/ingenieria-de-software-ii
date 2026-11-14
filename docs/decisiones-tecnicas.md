@@ -88,3 +88,9 @@ La configuración plana de ESLint utiliza el parser JSX incluido y una regla loc
 La sección 5.3.8 permite nombres de usuario de Instagram y TikTok de 1 a 30 caracteres, pero el DDL y el diccionario exigían al menos 2 caracteres en `business_contacts.valor`. Con autorización del usuario, el CHECK pasa a `length(valor) BETWEEN 1 AND 200` en el DDL oficial y en la especificación maestra. No cambian los campos, endpoints ni las validaciones de teléfono o URL.
 
 Las bases existentes requieren reconstruir únicamente `business_contacts` en una transacción, conservando filas, identificadores, secuencia AUTOINCREMENT e índice de contacto principal. El procedimiento está en la sección 7 de `docs/especificacion-base-de-datos.md`; `CREATE TABLE IF NOT EXISTS` no modifica un CHECK existente. No se debe usar `db:reset` para aplicar este ajuste a una base con datos.
+
+### F3A-01 — Mapa del campus por polígonos (2026-11-14)
+
+Se sustituye el mapa de círculos por las 8 zonas fijas (9 polígonos) de `docs/mapa-campus-zonas.md`, basado en la lámina Campus Hermosillo 2026. Las formas y etiquetas exactas viven en el frontend indexadas por `codigo`; Biblioteca Central y Museo comparten selección en sus dos piezas. La lista accesible conserva las zonas sin geometría y ofrece una alternativa táctil en móvil.
+
+Se actualizan descripciones y coordenadas porcentuales del seed; Enfermería corresponde a Sociales. `mapa_x`/`mapa_y` conservan su uso para cercanía y aproximan la etiqueta principal. No cambian el esquema ni los endpoints. El seed solo se aplica a bases vacías: las pruebas usan una base temporal; para regenerar datos de demostración se puede ejecutar `npm run db:reset`, que elimina los datos locales existentes.

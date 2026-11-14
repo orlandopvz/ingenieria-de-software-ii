@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 550" role="img" aria-labelledby="t">
+  <title id="t">Mapa simplificado del campus Hermosillo de la Universidad de Sonora en 8 zonas</title>
+  <rect width="1000" height="550" fill="#F8FAFC"/>
+  <image href="../frontend/src/assets/mapa-campus-hermosillo.webp" x="0" y="0" width="1000" height="550"/>
+  <g id="ZONA-CIENCIAS"><title>1. Ciencias Exactas y Computación</title>
+    <polygon points="684,338 755,325 765,324 765,366 815,366 815,450 853,450 854,499 707,510 690,382" fill="#CFE3F7" fill-opacity="0.35" stroke="#002D62" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="750" cy="426" r="16" fill="#002D62" stroke="#FFFFFF" stroke-width="1.5"/><text x="750" y="432" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#FFFFFF">1</text>
+  </g>
+  <g id="ZONA-BIBLIOTECA"><title>2. Biblioteca Central y Museo</title>
+    <polygon points="540,261 610,254 634,251 634,302 546,311" fill="#FBE3A6" fill-opacity="0.35" stroke="#002D62" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="653,99 684,134 721,176 757,202 832,215 915,213 978,204 989,283 929,292 913,300 846,311 755,325 750,239 669,247 654,162" fill="#FBE3A6" fill-opacity="0.35" stroke="#002D62" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="790" cy="265" r="16" fill="#002D62" stroke="#FFFFFF" stroke-width="1.5"/><text x="790" y="271" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#FFFFFF">2</text>
+    <circle cx="587" cy="281" r="16" fill="#002D62" stroke="#FFFFFF" stroke-width="1.5"/><text x="587" y="287" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#FFFFFF">2</text>
+  </g>
+  <g id="ZONA-PLAZA"><title>3. Plaza del Estudiante y Comedor Universitario</title>
+    <polygon points="634,251 669,247 750,239 755,325 684,338 676,298 634,302" fill="#D9F0D3" fill-opacity="0.35" stroke="#002D62" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="713" cy="283" r="16" fill="#002D62" stroke="#FFFFFF" stroke-width="1.5"/><text x="713" y="289" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#FFFFFF">3</text>
+  </g>
+  <g id="ZONA-INGENIERIA"><title>4. División de Ingeniería</title>
+    <polygon points="381,274 540,261 546,311 634,302 676,298 684,338 690,382 707,510 579,524 557,350 390,368" fill="#E3D9F2" fill-opacity="0.35" stroke="#002D62" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="618" cy="412" r="16" fill="#002D62" stroke="#FFFFFF" stroke-width="1.5"/><text x="618" y="418" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#FFFFFF">4</text>
+  </g>
+  <g id="ZONA-SOCIALES"><title>5. Ciencias Sociales, Derecho y Contabilidad</title>
+    <polygon points="368,49 397,38 500,9 548,11 577,22 610,55 653,99 654,162 669,247 634,251 610,254 540,261 381,274 375,179" fill="#F9D5CF" fill-opacity="0.35" stroke="#002D62" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="522" cy="147" r="16" fill="#002D62" stroke="#FFFFFF" stroke-width="1.5"/><text x="522" y="153" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#FFFFFF">5</text>
+  </g>
+  <g id="ZONA-SALUD"><title>6. Ciencias Biológicas y de la Salud</title>
+    <polygon points="19,399 90,431 233,428 232,359 268,359 272,401 305,404 307,460 393,460 396,535 324,538 243,521 127,479 22,440 9,424" fill="#CDEDEA" fill-opacity="0.35" stroke="#002D62" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="206" cy="471" r="16" fill="#002D62" stroke="#FFFFFF" stroke-width="1.5"/><text x="206" y="477" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#FFFFFF">6</text>
+  </g>
+  <g id="ZONA-HUMANIDADES"><title>7. Humanidades y Bellas Artes</title>
+    <polygon points="765,324 846,311 913,300 946,465 934,490 919,493 854,499 853,450 815,450 815,366 765,366" fill="#F6D3E6" fill-opacity="0.35" stroke="#002D62" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="886" cy="382" r="16" fill="#002D62" stroke="#FFFFFF" stroke-width="1.5"/><text x="886" y="388" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#FFFFFF">7</text>
+  </g>
+  <g id="ZONA-DEPORTIVA"><title>8. Área Deportiva y Gimnasio Universitario</title>
+    <polygon points="257,92 277,72 351,53 368,49 375,179 381,274 390,368 557,350 579,524 515,528 396,535 393,460 307,460 305,404 272,401 268,359 232,359 233,428 90,431 19,399" fill="#DDE8B9" fill-opacity="0.35" stroke="#002D62" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="228" cy="250" r="16" fill="#002D62" stroke="#FFFFFF" stroke-width="1.5"/><text x="228" y="256" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#FFFFFF">8</text>
+  </g>
+  <text x="965" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#002D62">N ↑</text>
+</svg>

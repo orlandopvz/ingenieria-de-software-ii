@@ -14,14 +14,14 @@ const categories = [
   ['Material Escolar y Electrónica', 'material-escolar', 'BookOpen'], ['Servicios y Asesorías', 'servicios', 'Briefcase']
 ];
 const zones = [
-  ['ZONA-CIENCIAS', 'Ciencias Exactas y Computación', 'Edificios 3K, 3B, Matemáticas, Física y Geología', 30, 30],
-  ['ZONA-BIBLIOTECA', 'Biblioteca Central y Museo', 'Explanada de Biblioteca Fernando Pesqueira y alrededores', 50, 40],
-  ['ZONA-PLAZA', 'Plaza del Estudiante y Comedor Universitario', 'Corazón del campus y áreas de descanso', 50, 55],
-  ['ZONA-INGENIERIA', 'División de Ingeniería', 'Ingeniería Civil, Industrial, Minas, Químicas y Metalurgia', 20, 50],
-  ['ZONA-SOCIALES', 'Ciencias Sociales, Derecho y Contabilidad', 'ECA, Derecho, Psicología, Comunicación y Trabajo Social', 70, 35],
-  ['ZONA-SALUD', 'Ciencias Biológicas y de la Salud', 'Medicina, Enfermería, Odontología, Químico Biólogo y Nutrición', 75, 60],
-  ['ZONA-HUMANIDADES', 'Humanidades y Bellas Artes', 'Lenguas Extranjeras, Arquitectura, Artes y Letras', 60, 20],
-  ['ZONA-DEPORTIVA', 'Área Deportiva y Gimnasio Universitario', 'Estadio Castro Servín y canchas', 40, 80],
+  ['ZONA-CIENCIAS', 'Ciencias Exactas y Computación', 'Edificios 3C a 3I, 3K, 3M, 3P y 3R: Matemáticas, Computación, Física y Geología', 75, 77],
+  ['ZONA-BIBLIOTECA', 'Biblioteca Central y Museo', 'Biblioteca Central, Rectoría, Vicerrectoría y Museo y Biblioteca', 79, 48],
+  ['ZONA-PLAZA', 'Plaza del Estudiante y Comedor Universitario', 'Corazón del campus: Plaza del Estudiante y Comedor Universitario', 71, 51],
+  ['ZONA-INGENIERIA', 'División de Ingeniería', 'Ingeniería Civil, Industrial, Química, Minas, Mecatrónica, Químico Biológicas y Servicios Escolares', 62, 75],
+  ['ZONA-SOCIALES', 'Ciencias Sociales, Derecho y Contabilidad', 'Derecho, Contabilidad, Economía, Psicología, Comunicación, Sociología, Historia, Trabajo Social y Enfermería', 52, 27],
+  ['ZONA-SALUD', 'Ciencias Biológicas y de la Salud', 'Medicina, Odontología y Unidad de Posgrado', 21, 86],
+  ['ZONA-HUMANIDADES', 'Humanidades y Bellas Artes', 'Letras, Música, Arquitectura, Bellas Artes, Centro de las Artes y Lenguas Extranjeras', 89, 69],
+  ['ZONA-DEPORTIVA', 'Área Deportiva y Gimnasio Universitario', 'Gimnasio Universitario, canchas, alberca, estadios de béisbol y Estadio Castro Servín', 23, 45],
   ['ZONA-MOVIL', 'Vendedor en Movimiento / Entrega a Acordar en Campus', 'Sin punto fijo, se desplaza entre departamentos', null, null]
 ];
 const escapeXml = text => text.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[character]);

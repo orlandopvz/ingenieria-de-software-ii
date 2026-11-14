@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 import { ESLint } from 'eslint';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { createTestApp } from '../../backend/tests/helpers/testApp.js';
 
 let fixture; let server; let vite; let api; let setToken;
@@ -69,6 +71,24 @@ test('Cliente real: registro, aprobación, catálogo, privacidad, reporte y sanc
   setToken(session.data.token, { persist: false });
   await assert.rejects(api.get('/auth/me'), error => error.status === 401 || error.code === 'ACCOUNT_SUSPENDED');
   await assert.rejects(api.get(`/businesses/${location.data.slug}`, { auth: false }), error => error.status === 404);
+});
+
+test('Mapa: usa códigos sin depender de IDs o coordenadas y conserva zonas desconocidas en lista', async () => {
+  const { default: CampusZoneSelector } = await vite.ssrLoadModule('/src/components/search/CampusZoneSelector.jsx');
+  const zones = [
+    { id: 42, codigo: 'ZONA-BIBLIOTECA', nombre: 'Biblioteca', orden_visual: 2, mapa_x: null, mapa_y: null },
+    { id: 43, codigo: 'ZONA-NUEVA', nombre: 'Zona nueva', orden_visual: 10, mapa_x: 50, mapa_y: 50 },
+    { id: 44, codigo: 'ZONA-MOVIL', nombre: 'Venta móvil', orden_visual: 9 }
+  ];
+  const render = props => renderToStaticMarkup(createElement(CampusZoneSelector, { zones, onChange() {}, ...props }));
+  const html = render({ value: '42' });
+  assert.equal((html.match(/<polygon /g) || []).length, 2);
+  assert.equal((html.match(/role="button"/g) || []).length, 1);
+  assert.equal((html.match(/fill="#F2A900"/g) || []).length, 2);
+  assert.match(html, /<option value="43">10\. Zona nueva<\/option>/);
+  assert.match(html, /<option value="42" selected="">/);
+  assert.match(html, /<option value="44">/);
+  assert.doesNotMatch(render({ allowMobile: false }), /value="44"|>Venta móvil<\/button>/);
 });
 
 test('ESLint reconoce componentes JSX y detecta variables ausentes o sin uso', async () => {

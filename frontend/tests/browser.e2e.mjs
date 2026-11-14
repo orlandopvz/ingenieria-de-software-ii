@@ -123,9 +123,22 @@ try {
   await click('Repostería y Postres'); await wait('new URLSearchParams(location.search).get("category_id")==="2" && document.querySelectorAll("main article").length===1');
   await click('Todas'); await wait('!new URLSearchParams(location.search).has("category_id") && document.querySelectorAll("main article").length===2');
   await evaluate('document.querySelector("main details").open=true');
-  assert.equal(await evaluate('document.querySelectorAll("main svg[role=group] g").length'), 8);
-  assert(await evaluate('[...document.querySelectorAll("main svg[role=group] g")].every(item=>item.getBoundingClientRect().width>=44 && item.getBoundingClientRect().height>=44)'));
-  await evaluate('document.querySelector("main svg[role=group] g").dispatchEvent(new MouseEvent("click",{bubbles:true}))'); await wait('new URLSearchParams(location.search).get("zone_id")==="1" && document.querySelectorAll("main article").length===1');
+  assert.equal(await evaluate('document.querySelectorAll("main svg[role=group] g[role=button]").length'), 8);
+  assert.equal(await evaluate('document.querySelectorAll("main svg[role=group] polygon").length'), 9);
+  assert(await evaluate('document.querySelector("main details select").getBoundingClientRect().height>=44'));
+  await evaluate('document.querySelector("main svg[role=group] g[role=button]").dispatchEvent(new MouseEvent("click",{bubbles:true}))'); await wait('new URLSearchParams(location.search).get("zone_id")==="1" && document.querySelectorAll("main article").length===1');
+  assert.equal(await evaluate('document.querySelector("main details select").value'), '1');
+  await select('main details select', '2');
+  await wait(`document.querySelectorAll('main svg g[aria-pressed=true] polygon[fill="#F2A900"]').length===2`);
+  assert.equal(await evaluate('document.querySelector("main svg[role=group]").lastElementChild.getAttribute("aria-pressed")'), 'true');
+  for (const key of ['Enter', ' ']) {
+    await click('Limpiar zona');
+    await evaluate(`document.querySelector('main svg g[aria-label="Biblioteca Central y Museo"]').focus()`);
+    await send('Input.dispatchKeyEvent', { type: 'keyDown', key, code: key === ' ' ? 'Space' : 'Enter', windowsVirtualKeyCode: key === ' ' ? 32 : 13 });
+    await send('Input.dispatchKeyEvent', { type: 'keyUp', key, code: key === ' ' ? 'Space' : 'Enter', windowsVirtualKeyCode: key === ' ' ? 32 : 13 });
+    await wait('new URLSearchParams(location.search).get("zone_id")==="2" && document.querySelector("main details select").value==="2"');
+    assert(await evaluate('getComputedStyle(document.activeElement).outlineStyle!=="none"'));
+  }
   await click('Venta móvil'); await wait('new URLSearchParams(location.search).has("zone_id")'); await click('Limpiar zona'); await wait('!new URLSearchParams(location.search).has("zone_id") && document.querySelector("main details select").value===""');
   await click('Productos'); await wait('document.querySelectorAll("main article").length===7'); await select('main label select', 'price_asc'); await wait('new URLSearchParams(location.search).get("sort")==="price_asc"');
   await fill('main input[type=search]', 'limon'); await wait('new URLSearchParams(location.search).get("q")==="limon" && document.querySelectorAll("main article").length===1');

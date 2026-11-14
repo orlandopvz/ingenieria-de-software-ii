@@ -134,7 +134,7 @@ flowchart LR
   * `frontend/src/pages/auth/{LoginPage.jsx, RegisterRequestPage.jsx, ForgotPasswordPage.jsx, ResetPasswordPage.jsx, AccountStatusPage.jsx}`
 * **Checklist de aceptación:**
   * [ ] Todos los filtros y el ordenamiento de `ExplorePage` se sincronizan con `useSearchParams()`.
-  * [ ] `CampusZoneSelector` dibuja el mapa esquemático SVG de la UNISON usando `mapa_x`/`mapa_y` y permite seleccionar `ZONA-MOVIL` o limpiar el filtro.
+  * [ ] `CampusZoneSelector` dibuja el mapa esquemático SVG de la UNISON usando 9 polígonos para 8 zonas por `codigo` según `docs/mapa-campus-zonas.md` y permite seleccionar `ZONA-MOVIL` o limpiar el filtro.
   * [ ] `BusinessProfileView` se construye como componente puro reutilizable por `BusinessDetailPage` y `ProfilePreviewPage` (`HU-34`).
 * **Commit:** `feat(frontend): directorio público, buscador multicriterio, perfil y auth (F3A)`
 

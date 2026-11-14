@@ -130,8 +130,8 @@ erDiagram
 | `codigo` | `TEXT` | `NOT NULL` | — | `UNIQUE` | Código corto inmutable (`ZONA-CIENCIAS`, `ZONA-PLAZA`, `ZONA-MOVIL`). |
 | `nombre` | `TEXT` | `NOT NULL` | — | `UNIQUE` | Nombre oficial del sector del campus. |
 | `descripcion` | `TEXT` | `NOT NULL` | `''` | — | Edificios, escuelas y referencias que comprende la zona. |
-| `mapa_x` | `INTEGER` | `NULL` | `NULL` | `CHECK (IS NULL OR BETWEEN 0 AND 100)`, `CHECK ((mapa_x IS NULL) = (mapa_y IS NULL))` | Coordenada X (`0..100`) en el mapa esquemático SVG y para distancia de cercanía (`NULL` en `ZONA-MOVIL`). |
-| `mapa_y` | `INTEGER` | `NULL` | `NULL` | `CHECK (IS NULL OR BETWEEN 0 AND 100)` | Coordenada Y (`0..100`) en el mapa esquemático SVG. |
+| `mapa_x` | `INTEGER` | `NULL` | `NULL` | `CHECK (IS NULL OR BETWEEN 0 AND 100)`, `CHECK ((mapa_x IS NULL) = (mapa_y IS NULL))` | Porcentaje X (`0..100`) aproximado de la etiqueta principal y para distancia de cercanía (`NULL` en `ZONA-MOVIL`). |
+| `mapa_y` | `INTEGER` | `NULL` | `NULL` | `CHECK (IS NULL OR BETWEEN 0 AND 100)` | Porcentaje Y (`0..100`) aproximado de la etiqueta principal. Los polígonos y etiquetas exactos se definen por `codigo` en `frontend/src/data/campusZoneShapes.js`, según `docs/mapa-campus-zonas.md`. |
 | `orden_visual` | `INTEGER` | `NOT NULL` | `0` | — | Orden de aparición en selectores desplegables. |
 | `activa` | `INTEGER` | `NOT NULL` | `1` | `CHECK (activa IN (0, 1))` | Indica si la zona está habilitada. |
 

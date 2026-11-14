@@ -353,7 +353,7 @@ REPORT_IP_SALT=cambia_esto_tambien
 | **HU-20A** | Administrador | Ocultar publicaciones de productos que incumplan las reglas para evitar contenido inapropiado o engañoso. | Alta / Media | Vista `/admin/moderacion` (`ModerationProductsPage`) alimentada por `GET /api/admin/products`. `PATCH /api/admin/products/:productId/moderate` con `{ "ocultar": true, "motivo_moderacion": "..." }` cambia `estado = 'oculto_admin'` y guarda `motivo_moderacion`, `moderado_por` y `moderado_at`. Con `{ "ocultar": false }` lo restaura a `activo`. Notifica al emprendedor (`producto_oculto` / `producto_restaurado`) y registra en `audit_logs`. |
 | **HU-20B / HU-21** | Administrador | Revisar las solicitudes de registro pendientes y aprobar o rechazar nuevas cuentas verificando pertenencia a la UNISON. | Alta / Alta | Vista `/admin/solicitudes` (`PendingRequestsPage`, con pestañas por estado). `GET /api/admin/requests?status=pendiente` muestra nombre, matrícula, correo, negocio, categoría y la credencial (cargada con `GET /api/admin/requests/:userId/credential`). `PATCH /api/admin/requests/:userId` con `{ "decision": "aprobada" \| "rechazada", "motivo": "..." }` (el motivo es obligatorio al rechazar). |
 | **HU-22** | Administrador | Suspender temporalmente una cuenta para aplicar sanciones cuando se incumplan reglas de la plataforma. | Media / Alta | `PATCH /api/admin/users/:userId/suspend` con `{ "suspend": true, "motivo": "...", "hasta": "YYYY-MM-DD" (opcional) }`. Pone `estado_cuenta = 'suspendida'`, `motivo_estado`, `suspendida_hasta`, `esta_abierto = 0` e incrementa `token_version` (cierra sesiones). El negocio desaparece del directorio. `{ "suspend": false }` la reactiva; el mantenimiento reactiva sola la cuenta al vencer `suspendida_hasta`. No se puede suspender a un administrador. |
-| **HU-23** | Consumidor | Buscar emprendimientos por zona del campus para ubicar negocios cercanos sin necesitar la ubicación exacta del vendedor. | Media / Media | Filtro `?zone_id=` en `GET /api/businesses` y `GET /api/products`: solo negocios con `mostrar_ubicacion = 1` y `campus_zone_id = :zone_id`. `CampusZoneSelector` muestra un **mapa esquemático SVG** con las zonas en sus coordenadas `mapa_x` y `mapa_y` (más una lista accesible equivalente). |
+| **HU-23** | Consumidor | Buscar emprendimientos por zona del campus para ubicar negocios cercanos sin necesitar la ubicación exacta del vendedor. | Media / Media | Filtro `?zone_id=` en `GET /api/businesses` y `GET /api/products`: solo negocios con `mostrar_ubicacion = 1` y `campus_zone_id = :zone_id`. `CampusZoneSelector` muestra un **mapa esquemático SVG** con 8 zonas fijas en 9 polígonos definidos por `codigo` en `frontend/src/data/campusZoneShapes.js`, según `docs/mapa-campus-zonas.md` (más una lista accesible equivalente). |
 | **HU-24** | Administrador | Gestionar los reportes enviados por los consumidores para tomar decisiones sobre cuentas denunciadas. | Media / Alta | Vista `/admin/reportes` (`ReportsManagerPage`). `PATCH /api/admin/reports/:reportId` con `{ "estado_reporte", "notas_admin", "accion_automatica": "ninguna" \| "ocultar_producto" \| "suspender_cuenta", "motivo_sancion" }`. En **una sola transacción** cambia el estado del reporte, ejecuta la acción, crea la notificación y registra la auditoría. `ocultar_producto` exige que el reporte tenga `product_id`. |
 | **HU-25** | Administrador | Dar mantenimiento general a la plataforma para asegurar su correcto funcionamiento. | Media / Media | Vista `/admin/mantenimiento` (`SystemMaintenancePage`). (1) `POST /api/admin/maintenance/run-inactivity-check` oculta negocios sin actividad en `INACTIVITY_DAYS_LIMIT` días; (2) `POST /api/admin/maintenance/backup` genera un respaldo con `db.backup()` y `GET /api/admin/maintenance/backups/:filename` lo descarga; (3) `GET /api/admin/maintenance/health` y `GET /api/admin/audit-logs` muestran métricas y bitácora; (4) `POST /api/admin/maintenance/cleanup-orphans` borra imágenes huérfanas. |
 | **HU-26** | Consumidor | Reportar un negocio con información falsa o inapropiada para ayudar a mantener el directorio confiable. | Media / Baja | Enlace *"Reportar este negocio"* en `/negocio/:slug` que abre `ReportModal` con motivo (`informacion_falsa`, `contenido_inapropiado`, `producto_prohibido`, `suplantacion`, `otro`), producto opcional y comentario (obligatorio, de 10 caracteres o más, si el motivo es `otro`). `POST /api/reports` sin cuenta, con *rate limit* por IP (5 por hora) y máximo 1 reporte por negocio por IP cada 24 h (`ip_hash`). |
@@ -702,16 +702,18 @@ Orden obligatorio al arrancar:
 
 * **Zonas del campus UNISON (`campus_zones`):** las coordenadas son aproximadas, en una cuadrícula 0–100 del mapa esquemático (x crece hacia el este, y hacia el sur).
 
+  Las coordenadas son porcentajes aproximados de la etiqueta principal (`x_svg = mapa_x * 10`, `y_svg = mapa_y * 5.5`) y se conservan para cercanía. El mapa usa los polígonos y etiquetas exactos de `docs/mapa-campus-zonas.md` en un `viewBox="0 0 1000 550"`; `ZONA-MOVIL` solo aparece en lista y botón.
+
   | orden | codigo | nombre | descripcion | mapa_x | mapa_y |
   | ----- | ----- | ----- | ----- | ----- | ----- |
-  | 1 | `ZONA-CIENCIAS` | Ciencias Exactas y Computación | Edificios 3K, 3B, Matemáticas, Física y Geología | 30 | 30 |
-  | 2 | `ZONA-BIBLIOTECA` | Biblioteca Central y Museo | Explanada de Biblioteca Fernando Pesqueira y alrededores | 50 | 40 |
-  | 3 | `ZONA-PLAZA` | Plaza del Estudiante y Comedor Universitario | Corazón del campus y áreas de descanso | 50 | 55 |
-  | 4 | `ZONA-INGENIERIA` | División de Ingeniería | Ingeniería Civil, Industrial, Minas, Químicas y Metalurgia | 20 | 50 |
-  | 5 | `ZONA-SOCIALES` | Ciencias Sociales, Derecho y Contabilidad | ECA, Derecho, Psicología, Comunicación y Trabajo Social | 70 | 35 |
-  | 6 | `ZONA-SALUD` | Ciencias Biológicas y de la Salud | Medicina, Enfermería, Odontología, Químico Biólogo y Nutrición | 75 | 60 |
-  | 7 | `ZONA-HUMANIDADES` | Humanidades y Bellas Artes | Lenguas Extranjeras, Arquitectura, Artes y Letras | 60 | 20 |
-  | 8 | `ZONA-DEPORTIVA` | Área Deportiva y Gimnasio Universitario | Estadio Castro Servín y canchas | 40 | 80 |
+  | 1 | `ZONA-CIENCIAS` | Ciencias Exactas y Computación | Edificios 3C a 3I, 3K, 3M, 3P y 3R: Matemáticas, Computación, Física y Geología | 75 | 77 |
+  | 2 | `ZONA-BIBLIOTECA` | Biblioteca Central y Museo | Biblioteca Central, Rectoría, Vicerrectoría y Museo y Biblioteca | 79 | 48 |
+  | 3 | `ZONA-PLAZA` | Plaza del Estudiante y Comedor Universitario | Corazón del campus: Plaza del Estudiante y Comedor Universitario | 71 | 51 |
+  | 4 | `ZONA-INGENIERIA` | División de Ingeniería | Ingeniería Civil, Industrial, Química, Minas, Mecatrónica, Químico Biológicas y Servicios Escolares | 62 | 75 |
+  | 5 | `ZONA-SOCIALES` | Ciencias Sociales, Derecho y Contabilidad | Derecho, Contabilidad, Economía, Psicología, Comunicación, Sociología, Historia, Trabajo Social y Enfermería | 52 | 27 |
+  | 6 | `ZONA-SALUD` | Ciencias Biológicas y de la Salud | Medicina, Odontología y Unidad de Posgrado | 21 | 86 |
+  | 7 | `ZONA-HUMANIDADES` | Humanidades y Bellas Artes | Letras, Música, Arquitectura, Bellas Artes, Centro de las Artes y Lenguas Extranjeras | 89 | 69 |
+  | 8 | `ZONA-DEPORTIVA` | Área Deportiva y Gimnasio Universitario | Gimnasio Universitario, canchas, alberca, estadios de béisbol y Estadio Castro Servín | 23 | 45 |
   | 9 | `ZONA-MOVIL` | Vendedor en Movimiento / Entrega a Acordar en Campus | Sin punto fijo, se desplaza entre departamentos | `NULL` | `NULL` |
 
 * **Cuentas de prueba preconfiguradas:**
@@ -888,7 +890,7 @@ Devuelve las categorías y zonas del campus activas para poblar filtros y select
         { "id": 2, "nombre": "Repostería y Postres", "slug": "reposteria", "descripcion": "", "icono": "Cake" }
       ],
       "campus_zones": [
-        { "id": 1, "codigo": "ZONA-CIENCIAS", "nombre": "Ciencias Exactas y Computación", "descripcion": "Edificios 3K, 3B, Matemáticas, Física y Geología", "mapa_x": 30, "mapa_y": 30, "orden_visual": 1 }
+        { "id": 1, "codigo": "ZONA-CIENCIAS", "nombre": "Ciencias Exactas y Computación", "descripcion": "Edificios 3C a 3I, 3K, 3M, 3P y 3R: Matemáticas, Computación, Física y Geología", "mapa_x": 75, "mapa_y": 77, "orden_visual": 1 }
       ]
     }
   }
@@ -1251,7 +1253,7 @@ El archivo `frontend/src/styles/index.css` importa Tailwind CSS v4 y expone los 
 
 1. **Vista Pública de Exploración y Búsqueda (`/`, alias `/explorar` — `ExplorePage.jsx`):**
    * **Cabecera UNISON (`Navbar.jsx`):** Logo de EmprendeBúho, buscador global (`SearchBar.jsx` con *debounce* de 300 ms) con conmutador *"Negocios"* / *"Productos"* (`HU-15`, `HU-37`), interruptor rápido **"Solo abiertos ahora"** (`HU-39`) con punto verde pulsante y acceso a **Favoritos** (`HU-31`) con contador.
-   * **Carrusel de Categorías (`CategoryChips.jsx`, `HU-19`) y Selector de Zona del Campus (`CampusZoneSelector.jsx`, `HU-23`):** Permite elegir en un clic una categoría o una zona del campus sobre un **mapa esquemático SVG** interactivo (con las 8 zonas fijas posicionadas según `mapa_x`/`mapa_y` y botón adicional para `ZONA-MOVIL`, más lista accesible por teclado).
+   * **Carrusel de Categorías (`CategoryChips.jsx`, `HU-19`) y Selector de Zona del Campus (`CampusZoneSelector.jsx`, `HU-23`):** Permite elegir en un clic una categoría o una zona del campus sobre un **mapa esquemático SVG** interactivo (con 8 zonas fijas en 9 polígonos definidos por `codigo` y etiquetas exactas según `docs/mapa-campus-zonas.md` y botón adicional para `ZONA-MOVIL`, más lista accesible por teclado).
    * **Barra de Filtros Avanzados y Ordenamiento (`FilterDrawer.jsx` y `SortSelector.jsx` — `HU-30`, `HU-33`, `HU-38`):** Panel lateral/modal con rango de precios (`$0` a `$500+`), filtro por horario específico (*"Abiertos el día... a las..."* o botón rápido *"Disponibles a esta hora"* que activa `available_now=true`) y selector de ordenamiento (*Abiertos primero*, *Alfabético A–Z*, *Alfabético Z–A*, *Cercanía a mi zona seleccionada*). Todos los filtros se reflejan en `useSearchParams()`.
    * **Cuadrícula Tipo Red Social (`HU-14`):**
      * En modo *Negocios*: tarjetas `BusinessCard.jsx` con foto de menú/perfil (o `Avatar` con iniciales si no tiene foto), insignia de categoría (`HU-05`), badge en tiempo real **ABIERTO / CERRADO** (`HU-17`; si `esta_abierto === true` pero `en_horario_ahora === false`, muestra subtítulo discreto *"Fuera de su horario habitual"*), badge de zona del campus (solo si `mostrar_ubicacion === true`; de lo contrario muestra *"Ubicación privada — Acordar por mensaje"*), rango de precios y botón de corazón para Favoritos (`HU-31`).
