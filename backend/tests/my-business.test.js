@@ -6,7 +6,7 @@ import request from 'supertest';
 import { createTestApp } from './helpers/testApp.js';
 
 async function fixture(t) {
-  const f = createTestApp(); t.after(f.close);
+  const f = await createTestApp(); t.after(f.close);
   const login = async (email, password = 'Buho2026!') => (await request(f.app).post('/api/auth/login').send({ identificador: email, password }).expect(200)).body.data.token;
   return { ...f, token: await login('fernanda.demo@unison.mx'), other: await login('orlando.demo@unison.mx'), admin: await login('admin@unison.mx', 'AdminUnison2026!') };
 }
@@ -37,7 +37,7 @@ test('Perfil: categoría vigente o previamente asignada, slug único y descripci
   const body = { nombre_negocio: 'Stickers y Pines Cholesky', category_id: 2, descripcion: 'Nueva descripción' };
   const response = await update(body).expect(200);
   assert.equal(response.body.data.slug, 'stickers-y-pines-cholesky-2');
-  f.db.prepare('UPDATE categories SET activa = 0 WHERE id IN (2, 3)').run();
+  await f.db.prepare('UPDATE categories SET activa = 0 WHERE id IN (2, 3)').run();
   await update({ ...body, category_id: 2 }).expect(200);
   await update({ ...body, category_id: 3 }).expect(400);
   await update({ ...body, descripcion: 'x'.repeat(1001) }).expect(400);
@@ -50,7 +50,7 @@ test('Ubicación: exige zona, conserva datos al ocultar y aplica privacidad inme
   assert.equal((await location({ mostrar_ubicacion: true }).expect(400)).body.error.code, 'VALIDATION_ERROR');
   await location({ campus_zone_id: 3, ubicacion_detalle: 'Junto a las mesas', mostrar_ubicacion: true }).expect(200);
   await location({ mostrar_ubicacion: false }).expect(200);
-  const stored = f.db.prepare('SELECT * FROM businesses WHERE id = 1').get();
+  const stored = await f.db.prepare('SELECT * FROM businesses WHERE id = 1').get();
   assert.equal(stored.campus_zone_id, 3); assert.equal(stored.ubicacion_detalle, 'Junto a las mesas');
   const preview = await request(f.app).get('/api/my-business/preview').set('Authorization', bearer(f.token)).expect(200);
   assert.equal(preview.body.data.campus_zone_id, null);
@@ -98,16 +98,16 @@ test('Productos: imagen obligatoria, pertenencia y borrado lógico con eliminaci
   await request(f.app).put(`/api/my-business/products/${id}`).set('Authorization', bearer(f.token)).field('precio', '1.234').expect(400);
   await request(f.app).delete(`/api/my-business/products/${id}`).set('Authorization', bearer(f.token)).expect(200);
   assert(!fs.existsSync(target));
-  const row = f.db.prepare('SELECT * FROM products WHERE id = :id').get({ id });
+  const row = await f.db.prepare('SELECT * FROM products WHERE id = :id').get({ id });
   assert.equal(row.estado, 'eliminado'); assert.equal(row.imagen_url, null);
   await request(f.app).patch(`/api/my-business/products/${id}/status`).set('Authorization', bearer(f.token)).send({ estado: 'activo' }).expect(404);
 });
 
 test('Moderación: edición conserva el bloqueo y señala una corrección incluso en el mismo segundo', async t => {
   const f = await fixture(t);
-  f.db.prepare('UPDATE products SET moderado_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = 9').run();
+  await f.db.prepare('UPDATE products SET moderado_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = 9').run();
   await request(f.app).put('/api/my-business/products/9').set('Authorization', bearer(f.other)).field('descripcion', 'Contenido corregido por el emprendedor').expect(200);
-  const row = f.db.prepare('SELECT * FROM products WHERE id = 9').get();
+  const row = await f.db.prepare('SELECT * FROM products WHERE id = 9').get();
   assert.equal(row.estado, 'oculto_admin'); assert(row.updated_at > row.moderado_at);
   assert.equal((await request(f.app).patch('/api/my-business/products/9/status').set('Authorization', bearer(f.other)).send({ estado: 'activo' }).expect(409)).body.error.code, 'PRODUCT_LOCKED');
   const review = await request(f.app).get('/api/admin/products?estado=oculto_admin').set('Authorization', bearer(f.admin)).expect(200);
@@ -116,7 +116,7 @@ test('Moderación: edición conserva el bloqueo y señala una corrección inclus
 
 test('Fotos: perfil y menú en sus directorios, reemplazo, borrado y limpieza de subidas fallidas', async t => {
   const f = await fixture(t);
-  const original = f.db.prepare('SELECT foto_perfil_url FROM businesses WHERE id = 1').get().foto_perfil_url;
+  const original = (await f.db.prepare('SELECT foto_perfil_url FROM businesses WHERE id = 1').get()).foto_perfil_url;
   const save = () => request(f.app).put('/api/my-business/photos').set('Authorization', bearer(f.token));
   await save().expect(400);
   const response = await save().attach('foto_perfil', Buffer.from('perfil'), { filename: 'p.png', contentType: 'image/png' })
@@ -150,12 +150,12 @@ test('Actividad: todas las mutaciones reactivan el negocio; los errores no alter
     () => auth(request(f.app).delete(`/api/my-business/products/${id}`))
   ];
   for (const operation of operations) {
-    f.db.prepare("UPDATE businesses SET inactivo_oculto = 1, last_activity_at = '2000-01-01 00:00:00' WHERE id = 1").run();
+    await f.db.prepare("UPDATE businesses SET inactivo_oculto = 1, last_activity_at = '2000-01-01 00:00:00' WHERE id = 1").run();
     const response = await operation(); assert([200, 201].includes(response.status), JSON.stringify(response.body));
-    const row = f.db.prepare('SELECT inactivo_oculto, last_activity_at FROM businesses WHERE id = 1').get();
+    const row = await f.db.prepare('SELECT inactivo_oculto, last_activity_at FROM businesses WHERE id = 1').get();
     assert.equal(row.inactivo_oculto, 0); assert(row.last_activity_at > '2000-01-01 00:00:00');
   }
-  f.db.prepare("UPDATE businesses SET inactivo_oculto = 1, last_activity_at = '2000-01-01 00:00:00' WHERE id = 1").run();
+  await f.db.prepare("UPDATE businesses SET inactivo_oculto = 1, last_activity_at = '2000-01-01 00:00:00' WHERE id = 1").run();
   await auth(request(f.app).patch('/api/my-business/open-status')).send({ esta_abierto: 'true' }).expect(400);
-  assert.equal(f.db.prepare('SELECT inactivo_oculto FROM businesses WHERE id = 1').get().inactivo_oculto, 1);
+  assert.equal((await f.db.prepare('SELECT inactivo_oculto FROM businesses WHERE id = 1').get()).inactivo_oculto, 1);
 });

@@ -5,32 +5,32 @@ import { AppError } from '../utils/AppError.js';
 export function createProductService(db, config) {
   const repository = createProductRepository(db);
   const business = createMyBusinessService(db, config);
-  const owned = (businessId, id) => { const row = repository.find(businessId, id); if (!row) throw new AppError(404, 'NOT_FOUND'); return row; };
-  const mutate = (businessId, operation) => db.transaction(() => { business.get(businessId); const result = operation(); business.touchActivity(businessId); return result; }).immediate();
+  const owned = async (businessId, id) => { const row = await repository.find(businessId, id); if (!row) throw new AppError(404, 'NOT_FOUND'); return row; };
+  const mutate = async (businessId, operation) => (await db.transaction(async () => { await business.get(businessId); const result = await operation(); await business.touchActivity(businessId); return result; }));
   const removeImage = url => { try { deleteUploadIfExists(url, config); } catch (error) { console.error('No se pudo eliminar una imagen anterior de producto.', error); } };
   return {
-    create(businessId, data, file) {
+    async create(businessId, data, file) {
       if (!file) throw new AppError(400, 'VALIDATION_ERROR', 'Adjunta una imagen del producto.');
-      const id = mutate(businessId, () => repository.insert({ ...data, business_id: businessId, imagen_url: `/uploads/products/${file.filename}` }));
-      return owned(businessId, id);
+      const id = await mutate(businessId, async () => (await repository.insert({ ...data, business_id: businessId, imagen_url: `/uploads/products/${file.filename}` })));
+      return await owned(businessId, id);
     },
-    edit(businessId, id, data, file) {
+    async edit(businessId, id, data, file) {
       let previous;
-      mutate(businessId, () => {
-        const row = owned(businessId, id);
+      await mutate(businessId, async () => {
+        const row = await owned(businessId, id);
         if (!file && Object.keys(data).length === 0) throw new AppError(400, 'VALIDATION_ERROR', 'Envía al menos un cambio del producto.');
         previous = file ? row.imagen_url : null;
-        repository.edit({ ...row, ...data, imagen_url: file ? `/uploads/products/${file.filename}` : row.imagen_url });
+        await repository.edit({ ...row, ...data, imagen_url: file ? `/uploads/products/${file.filename}` : row.imagen_url });
       });
-      removeImage(previous); return owned(businessId, id);
+      removeImage(previous); return await owned(businessId, id);
     },
-    status(businessId, id, estado) {
-      mutate(businessId, () => { const row = owned(businessId, id); if (row.estado === 'oculto_admin') throw new AppError(409, 'PRODUCT_LOCKED'); repository.status({ business_id: businessId, id, estado }); });
-      return owned(businessId, id);
+    async status(businessId, id, estado) {
+      await mutate(businessId, async () => { const row = await owned(businessId, id); if (row.estado === 'oculto_admin') throw new AppError(409, 'PRODUCT_LOCKED'); await repository.status({ business_id: businessId, id, estado }); });
+      return await owned(businessId, id);
     },
-    remove(businessId, id) {
+    async remove(businessId, id) {
       let previous;
-      mutate(businessId, () => { previous = owned(businessId, id).imagen_url; repository.remove(businessId, id); });
+      await mutate(businessId, async () => { previous = (await owned(businessId, id)).imagen_url; await repository.remove(businessId, id); });
       removeImage(previous); return { eliminado: true };
     }
   };

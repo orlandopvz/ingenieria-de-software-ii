@@ -8,7 +8,7 @@ import { reactivateExpiredAccount } from '../services/notification.service.js';
 
 export function createRequireAuth(db, config = env, logger = console) {
   const users = createUserRepository(db);
-  return (req, res, next) => {
+  return async (req, res, next) => {
     try {
       const match = /^Bearer ([^\s]+)$/i.exec(req.get('authorization') ?? '');
       if (!match) throw new AppError(401, 'UNAUTHORIZED');
@@ -19,7 +19,7 @@ export function createRequireAuth(db, config = env, logger = console) {
         || Number(payload.sub) < 1 || !Number.isInteger(payload.tv) || !Number.isFinite(payload.exp)) {
         throw new AppError(401, 'UNAUTHORIZED');
       }
-      let user = users.findForAuth(Number(payload.sub));
+      let user = await users.findForAuth(Number(payload.sub));
       if (!user) throw new AppError(401, 'UNAUTHORIZED');
       // Una suspensión debe comunicar su motivo incluso si también revocó la versión del token.
       if (user.estado_cuenta === 'suspendida') {
@@ -30,7 +30,7 @@ export function createRequireAuth(db, config = env, logger = console) {
           throw new AppError(403, 'ACCOUNT_SUSPENDED', undefined,
             { motivo_estado: user.motivo_estado, suspendida_hasta: toIsoUtc(user.suspendida_hasta) });
         }
-        if (reactivateExpiredAccount(db, user.id, logger)) user = users.findForAuth(user.id);
+        if ((await reactivateExpiredAccount(db, user.id, logger))) user = (await users.findForAuth(user.id));
         else throw new AppError(403, 'ACCOUNT_SUSPENDED', undefined,
           { motivo_estado: user.motivo_estado, suspendida_hasta: toIsoUtc(user.suspendida_hasta) });
       }

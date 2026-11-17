@@ -10,7 +10,7 @@ import { createTestApp } from '../../backend/tests/helpers/testApp.js';
 let fixture; let server; let vite; let api; let setToken;
 const originalWindow = globalThis.window;
 before(async () => {
-  fixture = createTestApp();
+  fixture = await createTestApp();
   server = fixture.app.listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
   globalThis.window = { location: { origin: `http://127.0.0.1:${server.address().port}` }, dispatchEvent() {} };
@@ -20,7 +20,7 @@ before(async () => {
 after(async () => {
   if (vite) await vite.close();
   if (server) await new Promise(resolve => server.close(resolve));
-  fixture?.close();
+  await fixture?.close();
   if (originalWindow === undefined) delete globalThis.window; else globalThis.window = originalWindow;
 });
 

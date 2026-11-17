@@ -2,19 +2,23 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { randomUUID } from 'node:crypto';
 import { env } from '../../src/config/env.js';
-import { createDatabase } from '../../src/config/db.js';
+import { createDatabase, initializeSchema, createStorageDirectories } from '../../src/config/db.js';
 import { seedDatabase } from '../../database/seed.js';
 import { createApp } from '../../src/app.js';
 
 // Cada suite posee su BD, sus archivos y una función de cierre; no cambia process.env.
-export function createTestApp({ seed = true, configure } = {}) {
+export async function createTestApp({ seed = true, configure } = {}) {
+  if (!process.env.TEST_DATABASE_URL) throw new Error('Configura TEST_DATABASE_URL con una base PostgreSQL de pruebas.');
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'emprendebuho-test-'));
-  const config = { ...env, NODE_ENV: 'test', DB_PATH: path.join(directory, 'test.sqlite'),
+  const config = { ...env, NODE_ENV: 'test', DATABASE_URL: process.env.TEST_DATABASE_URL, DB_SCHEMA: 'test_' + randomUUID().replaceAll('-', ''),
     UPLOAD_DIR: path.join(directory, 'uploads'), STORAGE_DIR: path.join(directory, 'storage'), BACKUP_DIR: path.join(directory, 'backups') };
   let db;
-  const close = () => {
-    if (db?.open) db.close();
+  const control = createDatabase({ ...config, DB_SCHEMA: undefined });
+  const close = async () => {
+    if (db) await db.close();
+    try { await control.exec(`DROP SCHEMA IF EXISTS ${config.DB_SCHEMA} CASCADE`); } finally { await control.close(); }
     const resolved = path.resolve(directory);
     if (path.dirname(resolved) !== path.resolve(os.tmpdir()) || !path.basename(resolved).startsWith('emprendebuho-test-')
       || (fs.existsSync(resolved) && fs.lstatSync(resolved).isSymbolicLink())) {
@@ -23,11 +27,14 @@ export function createTestApp({ seed = true, configure } = {}) {
     fs.rmSync(directory, { recursive: true, force: true });
   };
   try {
-    db = createDatabase(config, { seed: false });
-    if (seed) seedDatabase(db, config);
+    await control.exec(`CREATE SCHEMA ${config.DB_SCHEMA}`);
+    db = createDatabase(config);
+    createStorageDirectories(config);
+    await initializeSchema(db);
+    if (seed) await seedDatabase(db, config);
     const app = createApp({ db, config, configure: configure ? app => configure(app, { db, config }) : undefined });
     return { app, db, config, directory, close };
-  } catch (error) { close(); throw error; }
+  } catch (error) { await close(); throw error; }
 }
 
 // Comprobaciones F1 ejecutables sin crear archivos asignados a otras fases:
@@ -53,36 +60,30 @@ if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === imp
   const { loadEnv } = await import('../../src/config/env.js');
   const silent = { info() {} };
 
-  test('F1: esquema, PRAGMAs, semillas completas e idempotencia', t => {
-    const fixture = createTestApp(); t.after(fixture.close);
+  test('F1: esquema PostgreSQL, semillas completas e idempotencia', async t => {
+    const fixture = await createTestApp(); t.after(fixture.close);
     const { db, config } = fixture;
-    assert.equal(db.pragma('foreign_keys', { simple: true }), 1);
-    assert.equal(db.pragma('journal_mode', { simple: true }), 'wal');
-    assert.equal(db.pragma('busy_timeout', { simple: true }), 5000);
-    assert.equal(db.pragma('encoding', { simple: true }), 'UTF-8');
-    assert.equal(db.prepare('SELECT normalizar(:text) AS result').get({ text: ' BÚHO Limón ' }).result, 'buho limon');
-    assert.equal(db.prepare('SELECT normalizar(NULL) AS result').get().result, null);
+    assert.equal((await db.prepare('SELECT normalizar(:text) AS result').get({ text: ' BÚHO Limón ' })).result, 'buho limon');
+    assert.equal((await db.prepare('SELECT normalizar(NULL) AS result').get()).result, null);
     for (const [table, count] of [['categories', 8], ['campus_zones', 9], ['users', 5], ['businesses', 4], ['business_schedules', 28], ['products', 9], ['reports', 2]]) {
-      assert.equal(db.prepare(`SELECT COUNT(*) AS total FROM ${table}`).get().total, count);
+      assert.equal((await db.prepare(`SELECT COUNT(*) AS total FROM ${table}`).get()).total, count);
     }
-    assert.equal(db.prepare("SELECT COUNT(*) AS total FROM campus_zones WHERE mapa_x IS NOT NULL AND mapa_y IS NOT NULL").get().total, 8);
-    const mobile = db.prepare("SELECT * FROM campus_zones WHERE codigo = 'ZONA-MOVIL'").get();
+    assert.equal((await db.prepare("SELECT COUNT(*) AS total FROM campus_zones WHERE mapa_x IS NOT NULL AND mapa_y IS NOT NULL").get()).total, 8);
+    const mobile = await db.prepare("SELECT * FROM campus_zones WHERE codigo = 'ZONA-MOVIL'").get();
     assert.equal(mobile.mapa_x, null); assert.equal(mobile.mapa_y, null);
-    const admin = db.prepare("SELECT * FROM users WHERE rol = 'admin'").get();
+    const admin = await db.prepare("SELECT * FROM users WHERE rol = 'admin'").get();
     assert(bcrypt.compareSync('AdminUnison2026!', admin.password_hash));
-    for (const user of db.prepare("SELECT * FROM users WHERE rol = 'emprendedor'").all()) {
+    for (const user of (await db.prepare("SELECT * FROM users WHERE rol = 'emprendedor'").all())) {
       assert(bcrypt.compareSync('Buho2026!', user.password_hash));
       assert.equal(bcrypt.getRounds(user.password_hash), 10);
       assert(fs.existsSync(safePath(config.STORAGE_DIR, user.credencial_path)));
     }
-    assert.deepEqual(db.pragma('foreign_key_check'), []);
-    assert.equal(db.pragma('integrity_check', { simple: true }), 'ok');
-    assert.equal(seedDatabase(db, config), false);
-    assert.equal(db.prepare('SELECT COUNT(*) AS total FROM users').get().total, 5);
+    assert.equal((await seedDatabase(db, config)), false);
+    assert.equal((await db.prepare('SELECT COUNT(*) AS total FROM users').get()).total, 5);
   });
 
   test('F1: health, CORS, cabeceras y credenciales privadas', async t => {
-    const fixture = createTestApp(); t.after(fixture.close);
+    const fixture = await createTestApp(); t.after(fixture.close);
     const response = await request(fixture.app).get('/api/health').expect(200);
     assert.equal(response.body.ok, true);
     assert.equal(response.body.data.estado, 'disponible');
@@ -99,13 +100,13 @@ if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === imp
     await request(fixture.app).get('/api/health').set('Origin', 'https://no-permitido.example').expect(403);
   });
 
-  test('F1: traducción de AppError, ZodError y errores reales SQLite sin fugas', async t => {
-    const fixture = createTestApp({ configure(app, { db }) {
-      app.get('/prueba/aplicacion', () => { throw new AppError(409, 'CONFLICT'); });
+  test('F1: traducción de AppError, ZodError y errores reales PostgreSQL sin fugas', async t => {
+    const fixture = await createTestApp({ configure(app, { db }) {
+      app.get('/prueba/aplicacion', async () => { throw new AppError(409, 'CONFLICT'); });
       app.post('/prueba/validacion', validate({ body: z.object({ nombre: z.string().min(3) }) }), (req, res) => res.json(req.body));
-      app.get('/prueba/unico', () => db.prepare("INSERT INTO categories (nombre, slug) VALUES ('Repostería y Postres', 'otra')").run());
-      app.get('/prueba/foranea', () => db.prepare("INSERT INTO notifications (user_id, tipo, titulo, mensaje) VALUES (99999, 'sistema', 'Aviso', 'Aviso')").run());
-      app.get('/prueba/check', () => db.prepare('UPDATE products SET precio = -1 WHERE id = 1').run());
+      app.get('/prueba/unico', async () => (await db.prepare("INSERT INTO categories (nombre, slug) VALUES ('Repostería y Postres', 'otra')").run()));
+      app.get('/prueba/foranea', async () => (await db.prepare("INSERT INTO notifications (user_id, tipo, titulo, mensaje) VALUES (99999, 'sistema', 'Aviso', 'Aviso')").run()));
+      app.get('/prueba/check', async () => (await db.prepare('UPDATE products SET precio = -1 WHERE id = 1').run()));
       app.post('/prueba/json', (req, res) => res.json(req.body));
     } }); t.after(fixture.close);
     for (const [endpoint, status, code] of [['aplicacion', 409, 'CONFLICT'], ['unico', 409, 'CONFLICT'], ['foranea', 400, 'VALIDATION_ERROR'], ['check', 400, 'VALIDATION_ERROR']]) {
@@ -124,8 +125,8 @@ if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === imp
   test('F1: errores inesperados se registran sin exponer su contenido al cliente', async t => {
     const messages = [];
     t.mock.method(console, 'error', (...args) => messages.push(args));
-    const fixture = createTestApp({ seed: false, configure(app) {
-      app.get('/prueba/interno', () => { throw new Error('SQLITE información privada de prueba'); });
+    const fixture = await createTestApp({ seed: false, configure(app) {
+      app.get('/prueba/interno', async () => { throw new Error('SQLITE información privada de prueba'); });
     } }); t.after(fixture.close);
     const response = await request(fixture.app).get('/prueba/interno').expect(500);
     assert.equal(response.body.error.code, 'INTERNAL_ERROR');
@@ -134,17 +135,17 @@ if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === imp
     assert(messages[0][1] instanceof Error);
   });
 
-  test('F1: fallo de semilla revierte las filas y elimina sus nuevos placeholders', t => {
-    const fixture = createTestApp({ seed: false }); t.after(fixture.close);
-    fixture.db.exec("CREATE TRIGGER fallo_semilla BEFORE INSERT ON products BEGIN SELECT RAISE(ABORT, 'fallo de prueba'); END");
-    assert.throws(() => seedDatabase(fixture.db, fixture.config));
-    assert.equal(fixture.db.prepare('SELECT COUNT(*) AS total FROM users').get().total, 0);
-    assert.equal(fixture.db.prepare('SELECT COUNT(*) AS total FROM categories').get().total, 0);
+  test('F1: fallo de semilla revierte las filas y elimina sus nuevos placeholders', async t => {
+    const fixture = await createTestApp({ seed: false }); t.after(fixture.close);
+    await fixture.db.exec("CREATE OR REPLACE FUNCTION fail_test() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'fallo de prueba'; END $$; CREATE TRIGGER fallo_semilla BEFORE INSERT ON products FOR EACH ROW EXECUTE FUNCTION fail_test()");
+    await assert.rejects(async () => (await seedDatabase(fixture.db, fixture.config)));
+    assert.equal((await fixture.db.prepare('SELECT COUNT(*) AS total FROM users').get()).total, 0);
+    assert.equal((await fixture.db.prepare('SELECT COUNT(*) AS total FROM categories').get()).total, 0);
     assert.equal(fs.readdirSync(path.join(fixture.config.STORAGE_DIR, 'credentials')).length, 0);
     assert.equal(fs.readdirSync(path.join(fixture.config.UPLOAD_DIR, 'profiles')).length, 0);
   });
 
-  test('F1: ubicación privada con 0/false y listas blancas de serialización', () => {
+  test('F1: ubicación privada con 0/false y listas blancas de serialización', async () => {
     for (const mostrar_ubicacion of [0, false, undefined, '0']) {
       const original = { id: 1, mostrar_ubicacion, esta_abierto: 1, en_horario_ahora: 0, campus_zone_id: 3, zona_codigo: 'SECRETO', zona_nombre: 'Privado', ubicacion_detalle: 'Privado',
         _mapa_x: 50, _mapa_y: 55, password_hash: 'secreto', credencial_path: 'credentials/demo.svg', user_id: 2, updated_at: '2026-10-19 17:00:00' };
@@ -162,7 +163,7 @@ if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === imp
   });
 
   test('F1: autenticación, roles, revocación y reactivación transaccional', async t => {
-    const fixture = createTestApp({ configure(app, { db, config }) {
+    const fixture = await createTestApp({ configure(app, { db, config }) {
       const auth = createRequireAuth(db, config, silent);
       app.get('/prueba/privada', auth, (req, res) => res.json(req.user));
       app.get('/prueba/admin', auth, requireRole('admin'), (req, res) => res.json(req.user));
@@ -180,24 +181,24 @@ if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === imp
     await request(fixture.app).get('/prueba/admin').set('Authorization', `Bearer ${token(1)}`).expect(200);
     assert.equal((await get(token(4)).expect(403)).body.error.code, 'ACCOUNT_PENDING');
     assert.equal((await get(token(5)).expect(403)).body.error.code, 'ACCOUNT_REJECTED');
-    fixture.db.prepare('UPDATE users SET token_version = 1 WHERE id = 2').run();
+    await fixture.db.prepare('UPDATE users SET token_version = 1 WHERE id = 2').run();
     assert.equal((await get(token(2)).expect(401)).body.error.code, 'UNAUTHORIZED');
-    fixture.db.prepare("UPDATE users SET estado_cuenta = 'suspendida', motivo_estado = 'Revisión', suspendida_hasta = '2999-01-01 00:00:00' WHERE id = 2").run();
+    await fixture.db.prepare("UPDATE users SET estado_cuenta = 'suspendida', motivo_estado = 'Revisión', suspendida_hasta = '2999-01-01 00:00:00' WHERE id = 2").run();
     assert.equal((await get(token(2)).expect(403)).body.error.code, 'ACCOUNT_SUSPENDED');
-    fixture.db.prepare("UPDATE users SET suspendida_hasta = '2000-01-01 00:00:00' WHERE id = 2").run();
+    await fixture.db.prepare("UPDATE users SET suspendida_hasta = '2000-01-01 00:00:00' WHERE id = 2").run();
     await get(token(2)).expect(401);
-    assert.equal(fixture.db.prepare('SELECT estado_cuenta FROM users WHERE id = 2').get().estado_cuenta, 'suspendida');
-    fixture.db.prepare("UPDATE users SET token_version = 0, suspendida_hasta = '2000-01-01 00:00:00' WHERE id = 2").run();
+    assert.equal((await fixture.db.prepare('SELECT estado_cuenta FROM users WHERE id = 2').get()).estado_cuenta, 'suspendida');
+    await fixture.db.prepare("UPDATE users SET token_version = 0, suspendida_hasta = '2000-01-01 00:00:00' WHERE id = 2").run();
     await get(token(2)).expect(200);
     await get(token(2)).expect(200);
-    assert.equal(fixture.db.prepare("SELECT COUNT(*) AS total FROM notifications WHERE tipo = 'cuenta_reactivada'").get().total, 1);
-    assert.equal(fixture.db.prepare("SELECT COUNT(*) AS total FROM audit_logs WHERE accion = 'reactivar_cuenta'").get().total, 1);
-    fixture.db.prepare("UPDATE users SET estado_cuenta = 'eliminada' WHERE id = 2").run();
+    assert.equal((await fixture.db.prepare("SELECT COUNT(*) AS total FROM notifications WHERE tipo = 'cuenta_reactivada'").get()).total, 1);
+    assert.equal((await fixture.db.prepare("SELECT COUNT(*) AS total FROM audit_logs WHERE accion = 'reactivar_cuenta'").get()).total, 1);
+    await fixture.db.prepare("UPDATE users SET estado_cuenta = 'eliminada' WHERE id = 2").run();
     assert.equal((await get(token(2)).expect(401)).body.error.code, 'INVALID_CREDENTIALS');
   });
 
   test('F1: subidas con MIME/tamaño limitados y credenciales fuera de uploads', async t => {
-    const fixture = createTestApp({ configure(app, { config }) {
+    const fixture = await createTestApp({ configure(app, { config }) {
       app.post('/prueba/imagen', publicImage('profiles', config).single('imagen'), (req, res) => res.json({ nombre: req.file.filename }));
       app.post('/prueba/credencial', createCredentialImage(config).single('credencial'), (req, res) => res.json({ nombre: req.file.filename }));
     } }); t.after(fixture.close);
@@ -221,7 +222,7 @@ if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === imp
   });
 
   test('F1: validación de query/params en Express 5 y mensajes seguros', async t => {
-    const fixture = createTestApp({ seed: false, configure(app) {
+    const fixture = await createTestApp({ seed: false, configure(app) {
       app.get('/prueba/:id', validate({ params: z.object({ id: z.coerce.number().int().positive() }), query: z.object({ page: z.coerce.number().int().positive() }) }),
         (req, res) => res.json({ id: req.params.id, page: req.query.page }));
     } }); t.after(fixture.close);
@@ -230,7 +231,7 @@ if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === imp
   });
 
   test('F1: límites de tasa y sobre RATE_LIMITED', async t => {
-    const fixture = createTestApp({ seed: false, configure(app, { config }) {
+    const fixture = await createTestApp({ seed: false, configure(app, { config }) {
       app.get('/prueba/limite', createRateLimiter({ windowMs: 60000, limit: 1 }, { ...config, NODE_ENV: 'development' }), (req, res) => res.json({ ok: true }));
     } }); t.after(fixture.close);
     await request(fixture.app).get('/prueba/limite').expect(200);
@@ -239,22 +240,22 @@ if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === imp
     assert(response.headers['retry-after']);
   });
 
-  test('F1: notificaciones participan en la transacción del llamador', t => {
-    const fixture = createTestApp(); t.after(fixture.close);
+  test('F1: notificaciones participan en la transacción del llamador', async t => {
+    const fixture = await createTestApp(); t.after(fixture.close);
     const service = createNotificationService(fixture.db, silent);
     const notification = { user_id: 2, tipo: 'sistema', titulo: 'Aviso', mensaje: 'Mensaje de prueba' };
-    assert.throws(() => fixture.db.transaction(() => { service.notify(notification); throw new Error('Revertir'); })());
-    assert.equal(fixture.db.prepare('SELECT COUNT(*) AS total FROM notifications').get().total, 0);
-    assert.equal(typeof service.notify(notification), 'number');
-    assert.equal(fixture.db.prepare('SELECT COUNT(*) AS total FROM notifications').get().total, 1);
+    await assert.rejects(async () => (await fixture.db.transaction(async () => { await service.notify(notification); throw new Error('Revertir'); })));
+    assert.equal((await fixture.db.prepare('SELECT COUNT(*) AS total FROM notifications').get()).total, 0);
+    assert.equal(typeof (await service.notify(notification)), 'number');
+    assert.equal((await fixture.db.prepare('SELECT COUNT(*) AS total FROM notifications').get()).total, 1);
   });
 
-  test('F1: configuración, horarios de Hermosillo, LIKE y slug sin SQL en utilidades', () => {
+  test('F1: configuración, horarios de Hermosillo, LIKE y slug sin SQL en utilidades', async () => {
     assert.throws(() => loadEnv({}), /Configuración inválida/);
     assert.throws(() => loadEnv({ ...process.env, STORAGE_DIR: './uploads/credentials' }), /Configuración inválida/);
     assert.deepEqual(nowInHermosillo(new Date('2026-10-20T06:59:00Z')), { dow: 1, time: '23:59' });
     assert.deepEqual(nowInHermosillo(new Date('2026-10-20T07:00:00Z')), { dow: 2, time: '00:00' });
     assert.equal(escapeLike('50%_\\'), '50\\%\\_\\\\');
-    assert.equal(uniqueSlug('Búho Postres', slug => ['buho-postres', 'buho-postres-2'].includes(slug)), 'buho-postres-3');
+    assert.equal((await uniqueSlug('Búho Postres', slug => ['buho-postres', 'buho-postres-2'].includes(slug))), 'buho-postres-3');
   });
 }

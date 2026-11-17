@@ -20,7 +20,7 @@ if (!browserPath || !fs.existsSync(browserPath)) throw new Error('No se encontr�
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'emprendebuho-e2e-'));
 const profile = path.join(directory, 'browser'); const downloads = path.join(directory, 'downloads');
 fs.mkdirSync(profile); fs.mkdirSync(downloads);
-const fixture = createTestApp();
+const fixture = await createTestApp();
 let vite; let browser; let socket; let apiServer;
 const failures = []; const traffic = []; const pending = new Map(); let sequence = 0;
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -113,7 +113,7 @@ try {
     await viewport(360, 800); await login('fernanda.demo@unison.mx'); await wait('location.pathname==="/panel"');
     await go('/panel/cuenta'); await click('Cerrar mi negocio y eliminar mi cuenta'); await fill('dialog[open] input[name=password_actual]', 'Buho2026!'); await click('Eliminar mi cuenta', 'dialog[open]');
     await wait('!localStorage.getItem("emprendebuho_token")');
-    assert.equal(fixture.db.prepare('SELECT estado_cuenta FROM users WHERE id=2').get().estado_cuenta, 'eliminada');
+    assert.equal((await fixture.db.prepare('SELECT estado_cuenta FROM users WHERE id=2').get()).estado_cuenta, 'eliminada');
     await wait('location.pathname==="/"'); check('baja de cuenta y redirección');
   } else {
   await viewport(360, 800); await go('/'); await wait('document.querySelectorAll("main article").length===2'); await noOverflow();
@@ -206,11 +206,11 @@ try {
   await logout(); await login('admin@unison.mx', 'AdminUnison2026!'); await wait('location.pathname==="/admin"'); await go('/admin/moderacion?estado=oculto_admin'); await wait('document.body.innerText.includes("Corregido por el emprendedor")'); await articleAction('Producto F4', 'Restaurar producto'); await click('Confirmar restauración', 'dialog[open]'); await wait('!document.querySelector("dialog[open]")');
   const posts = traffic.filter(item=>item.method==='POST'&&item.path.includes('/maintenance/')).length;
   await go('/admin/mantenimiento'); await wait('document.body.innerText.includes("Todavía no hay respaldos")'); assert.equal(traffic.filter(item=>item.method==='POST'&&item.path.includes('/maintenance/')).length, posts);
-  for (const action of ['Ejecutar barrido de inactividad', 'Limpiar archivos huérfanos', 'Crear respaldo SQLite']) { await click(action); await click('Confirmar ejecución', 'dialog[open]'); await wait('!document.querySelector("dialog[open]")'); }
-  await wait('document.body.innerText.includes("Descargar .sqlite")'); await click('Descargar .sqlite');
+  for (const action of ['Ejecutar barrido de inactividad', 'Limpiar archivos huérfanos', 'Crear respaldo PostgreSQL']) { await click(action); await click('Confirmar ejecución', 'dialog[open]'); await wait('!document.querySelector("dialog[open]")'); }
+  await wait('document.body.innerText.includes("Descargar .dump")'); await click('Descargar .dump');
   const backup = (await api('/admin/maintenance/health')).data.backups[0];
   for (let i=0;i<100&&!fs.existsSync(path.join(downloads,backup.filename));i++) await pause(100);
-  assert.equal(fs.readFileSync(path.join(downloads,backup.filename)).subarray(0,16).toString(), 'SQLite format 3\0');
+  assert.equal(fs.readFileSync(path.join(downloads,backup.filename)).subarray(0,5).toString(), 'PGDMP');
   await fill('main input[placeholder="Por ejemplo: resolver_reporte"]', 'respaldo_bd'); await wait('document.body.innerText.includes("respaldo bd")');
   await viewport(360,800); await noOverflow(); await screenshot('administrador-360');
   check('administrador: credencial Blob, aprobar/rechazar, categorías, sanciones, restauración, respaldo descargado y auditoría');
@@ -238,5 +238,5 @@ try {
   for (const request of pending.values()) { clearTimeout(request.timer); request.reject(new Error('Sesión CDP cerrada.')); }
   if (vite) await vite.close();
   if (apiServer) await new Promise(resolve => apiServer.close(resolve));
-  fixture.close();
+  await fixture.close();
 }

@@ -3,8 +3,8 @@ import { publicQueryParams, pagination } from './businessPublic.service.js';
 import { sanitizePublicBusiness } from './serializers.js';
 export function createProductPublicService(db) {
   const repository = createProductPublicRepository(db);
-  return { list(query) {
-    const result = repository.list(publicQueryParams(query), query.sort);
+  return { async list(query) {
+    const result = await repository.list(publicQueryParams(query), query.sort);
     return { items: result.items.map(row => ({
       id: row.id, nombre: row.nombre, descripcion: row.descripcion, precio: row.precio, imagen_url: row.imagen_url,
       business: sanitizePublicBusiness({ id: row.negocio_id, nombre_negocio: row.nombre_negocio, slug: row.slug,

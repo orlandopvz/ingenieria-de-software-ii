@@ -5,7 +5,7 @@ export const userParams = z.object({ userId: id });
 export const productParams = z.object({ productId: id });
 export const reportParams = z.object({ reportId: id });
 export const categoryParams = z.object({ id });
-export const backupParams = z.object({ filename: z.string().regex(/^emprendebuho_\d{8}_\d{6}\.sqlite$/) });
+export const backupParams = z.object({ filename: z.string().regex(/^emprendebuho_\d{8}_\d{6}\.dump$/) });
 const pagination = { page: id.default(1), limit: id.max(50).default(24) };
 const paginated = schema => schema.refine(data => Number.isSafeInteger((data.page - 1) * data.limit), 'La página está fuera del rango permitido.');
 export const requestsQuery = paginated(z.object({ ...pagination, status: z.enum(['pendiente', 'aprobada', 'rechazada', 'suspendida']).default('pendiente'), q: z.string().trim().min(1).max(120).optional() }));

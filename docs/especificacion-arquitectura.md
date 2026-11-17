@@ -31,9 +31,9 @@ De acuerdo con §1.2 de la especificación maestra:
 | ----- | ----- | ----- |
 | **PA-01** | **Separación estricta de responsabilidades en 4 capas (Backend)** | `Routes → Controllers → Services → Repositories`. Ningún controlador contiene lógica de negocio ni SQL; ningún repositorio conoce objetos HTTP (`req`, `res`). |
 | **PA-02** | **Privacidad por diseño y por defecto (`RNF-06`)** | La ubicación inicia apagada (`mostrar_ubicacion = 0`), las credenciales estudiantiles viven fuera de la raíz estática (`backend/storage/credentials/`) y toda salida pública pasa obligatoriamente por el serializador `sanitizePublicBusiness()`. |
-| **PA-03** | **Integridad declarativa en la base de datos** | Las invariantes de dominio (matrícula de 9 dígitos, horario válido, ubicación pública con zona obligatoria, motivo obligatorio en sanciones, un solo contacto principal) se imponen simultáneamente con `zod` en la entrada HTTP y con restricciones `CHECK` / `UNIQUE` / `FOREIGN KEY` en SQLite. |
-| **PA-04** | **Revocación inmediata de sesión sin estado compartido** | Los JWT incluyen `tv` (`token_version`). Cada petición autenticada verifica en SQLite (lectura en microsegundos por clave primaria) el `estado_cuenta` y la versión del token, permitiendo invalidar sesiones al instante al suspender o eliminar cuentas. |
-| **PA-05** | **Determinismo de errores en español (`RNF-05`)** | Un único middleware global (`error.middleware.js`) intercepta `AppError`, `ZodError`, `MulterError` y `SqliteError` y los traduce al catálogo cerrado de 14 códigos (§5.0.2) sin exponer trazas de pila ni errores crudos de SQLite. |
+| **PA-03** | **Integridad declarativa en la base de datos** | Las invariantes de dominio (matrícula de 9 dígitos, horario válido, ubicación pública con zona obligatoria, motivo obligatorio en sanciones, un solo contacto principal) se imponen simultáneamente con `zod` en la entrada HTTP y con restricciones `CHECK` / `UNIQUE` / `FOREIGN KEY` en PostgreSQL. |
+| **PA-04** | **Revocación inmediata de sesión sin estado compartido** | Los JWT incluyen `tv` (`token_version`). Cada petición autenticada verifica en PostgreSQL (consulta por clave primaria) el `estado_cuenta` y la versión del token, permitiendo invalidar sesiones al instante al suspender o eliminar cuentas. |
+| **PA-05** | **Determinismo de errores en español (`RNF-05`)** | Un único middleware global (`error.middleware.js`) intercepta `AppError`, `ZodError`, `MulterError` y `DatabaseError` y los traduce al catálogo cerrado de 14 códigos (§5.0.2) sin exponer trazas de pila ni errores crudos de PostgreSQL. |
 
 ---
 
@@ -49,7 +49,7 @@ flowchart TB
     Emprendedor["🧑‍🍳 Estudiante Emprendedor UNISON\nCuenta verificada con correo @unison.mx\ny credencial institucional"]
     Admin["🛡️ Administrador de Plataforma\nModera solicitudes, productos,\nreportes y mantenimiento"]
 
-    Sistema["🦉 Sistema EmprendeBúho\nDirectorio y red social de emprendimientos\nestudiantiles UNISON (SPA + API REST + SQLite)"]
+    Sistema["🦉 Sistema EmprendeBúho\nDirectorio y red social de emprendimientos\nestudiantiles UNISON (SPA + API REST + PostgreSQL)"]
 
     WhatsApp["💬 WhatsApp / Telefonía Móvil\n(Enlaces profundos wa.me / tel:)"]
     Redes["📱 Redes Sociales Externas\n(Instagram, TikTok, Facebook)"]
@@ -80,9 +80,9 @@ flowchart LR
         Scheduler["Módulo residente: Planificador Local\n(Barrido de inactividad y vencimiento\nde suspensiones cada 12 h)"]
     end
 
-    subgraph Persistencia["Sistema de Archivos Local (backend/)"]
-        SQLite[("Base de Datos Relacional\ndatabase/emprendebuho.sqlite\nSQLite 3 (WAL + Foreign Keys)")]
-        Backups[("Carpeta de Respaldos\ndatabase/backups/*.sqlite\n(API nativa db.backup)")]
+    subgraph Persistencia["Persistencia: PostgreSQL externo y archivos locales"]
+        PostgreSQL[("Base de Datos Relacional\nDATABASE_URL\nPostgreSQL 16+ (servidor externo)")]
+        Backups[("Carpeta de Respaldos\ndatabase/backups/*.dump\n(pg_dump --format=custom)")]
         Uploads[["Almacenamiento Público de Imágenes\nuploads/{profiles,menus,products}\nServido en GET /uploads/*"]]
         Storage[["Bóveda Privada de Credenciales\nstorage/credentials/*\nPROHIBIDO acceso estático"]]
     end
@@ -91,11 +91,11 @@ flowchart LR
     SPA -- "JSON / multipart sobre HTTP\n(/api/* vía proxy Vite)" --> API
     SPA -- "Carga de imágenes públicas\n(GET /uploads/*)" --> Uploads
 
-    API <--> SQLite
-    API -- "db.backup()" --> Backups
+    API <--> PostgreSQL
+    API -- "pg_dump" --> Backups
     API -- "Lectura/Escritura validada\n(JPEG/PNG/WebP <= 5 MB)" --> Uploads
     API -- "Escritura en registro y entrega\nprotegida solo a rol admin" --> Storage
-    Scheduler --> SQLite
+    Scheduler --> PostgreSQL
 ```
 
 ---
@@ -120,11 +120,11 @@ flowchart TB
         Routes["1. Capa de Enrutamiento (routes/*.routes.js)\nauth | catalog | business | product | myBusiness | notification | report | admin"]
         Controllers["2. Capa de Controladores (controllers/*.controller.js)\nExtrae datos validados de req y responde con ok(res, data, message, meta)"]
         Services["3. Capa de Servicios de Dominio (services/*.service.js)\nReglas de negocio, transacciones db.transaction(), touchActivity(), serializers, notificaciones y auditoría"]
-        Repos["4. Capa de Repositorios (repositories/*.repository.js)\nSentencias SQL parametrizadas sobre better-sqlite3"]
+        Repos["4. Capa de Repositorios (repositories/*.repository.js)\nSentencias SQL parametrizadas sobre pg"]
     end
 
     subgraph Infra["Infraestructura Local (config/ y utils/)"]
-        DBConn["config/db.js\nbetter-sqlite3 + PRAGMAs + función SQL normalizar()"]
+        DBConn["config/db.js\npg + pool + función SQL normalizar()"]
         FileUtil["utils/files.js\nBorrado seguro de archivos reemplazados/huérfanos"]
         TimeUtil["utils/time.js\nReloj America/Hermosillo (UTC-7)"]
     end
@@ -138,20 +138,20 @@ flowchart TB
     Repos --> DBConn
     Controllers -. "Excepciones / AppError" .-> ErrorMW
     Services -. "Excepciones / AppError" .-> ErrorMW
-    Repos -. "SqliteError" .-> ErrorMW
+    Repos -. "DatabaseError" .-> ErrorMW
 ```
 
 #### Responsabilidades de los Componentes del Backend
 
 | Componente | Archivos | Responsabilidad Única |
 | ----- | ----- | ----- |
-| **Configuración y Arranque** | `config/env.js`, `config/db.js`, `config/upload.js`, `app.js`, `server.js` | Validar variables de entorno, abrir SQLite en modo WAL, registrar `normalizar()`, ejecutar `schema.sql` y `seed.js` si la BD está vacía, montar Express y programar el mantenimiento periódico. |
+| **Configuración y Arranque** | `config/env.js`, `config/db.js`, `config/upload.js`, `app.js`, `server.js` | Validar variables de entorno, abrir el pool PostgreSQL y comprobar conexión; esquema y semillas mediante comandos explícitos, montar Express y programar el mantenimiento periódico. |
 | **Middlewares de Seguridad y Validación** | `middlewares/{auth,role,validate,rateLimit,error}.middleware.js` | Autenticar tokens contra `users.token_version`, autorizar por rol, limitar tasa por IP, validar `body`/`query`/`params` con `zod` y formatear todos los errores. |
 | **Módulo de Autenticación y Cuenta** | `auth.{routes,controller,service,validator}.js`, `user.repository.js` | Registro con credencial (`HU-01`), reutilización de cuentas rechazadas/eliminadas, login con verificación de estado (`HU-40`), consulta pública de estatus (`HU-27`), recuperación de contraseña (`HU-32`) y baja de cuenta (`HU-28`). |
 | **Módulo Público de Directorio y Productos** | `catalog.*`, `business.*`, `product.*`, `businessPublic.repository.js`, `productPublic.repository.js`, `serializers.js` | Catálogos (`HU-05`), exploración y búsqueda multicriterio de negocios y productos (`HU-14, 15, 18, 19, 23, 29, 30, 31, 33, 37, 38, 39`) garantizando `sanitizePublicBusiness()` (`RNF-06`). |
 | **Módulo de Panel del Emprendedor** | `myBusiness.{routes,controller,service,repository,validator}.js`, `product.{service,repository,validator}.js` | Gestión autenticada del propio negocio (`HU-02..13, 17, 34, 36`) y actualización automática de `last_activity_at` e `inactivo_oculto = 0` en cada escritura (`touchActivity`). |
 | **Módulo de Reportes y Notificaciones** | `report.*`, `notification.*` | Recepción de denuncias anónimas con deduplicación por `ip_hash` (`HU-26`) y bandeja de notificaciones internas + log estructurado en consola (`HU-27`). |
-| **Módulo de Administración y Mantenimiento** | `admin.*`, `maintenance.service.js`, `audit.repository.js` | Aprobación/rechazo con entrega privada de credencial (`HU-20B/21`), suspensión temporal (`HU-22`), moderación de productos (`HU-20A`), resolución transaccional de reportes (`HU-24, 35`), categorías (`HU-16`), barrido de inactividad, respaldos `.sqlite` y bitácora (`HU-25`). |
+| **Módulo de Administración y Mantenimiento** | `admin.*`, `maintenance.service.js`, `audit.repository.js` | Aprobación/rechazo con entrega privada de credencial (`HU-20B/21`), suspensión temporal (`HU-22`), moderación de productos (`HU-20A`), resolución transaccional de reportes (`HU-24, 35`), categorías (`HU-16`), barrido de inactividad, respaldos `.dump` y bitácora (`HU-25`). |
 
 ---
 
@@ -241,7 +241,7 @@ sequenceDiagram
     participant SPA as React SPA
     participant API as Express API
     participant FS as storage/credentials/
-    participant DB as SQLite (WAL)
+    participant DB as PostgreSQL
     actor Adm as Administrador
 
     Emp->>SPA: Completa /registro (@unison.mx, matrícula 9 dígitos, foto credencial, negocio)
@@ -275,7 +275,7 @@ sequenceDiagram
     participant Ctrl as business.controller.js
     participant Svc as businessPublic.service.js
     participant Repo as businessPublic.repository.js
-    participant DB as SQLite + normalizar()
+    participant DB as PostgreSQL + normalizar()
 
     Con->>SPA: Filtra (q="limon", zone_id=1, min_price=20, max_price=60, available_now=true)
     SPA->>Ctrl: GET /api/businesses?q=limon&zone_id=1&min_price=20&max_price=60&available_now=true
@@ -297,7 +297,7 @@ sequenceDiagram
     autonumber
     actor Con as Consumidor Anónimo
     participant API as Express API
-    participant DB as SQLite
+    participant DB as PostgreSQL
     actor Adm as Administrador
     actor Emp as Emprendedor Denunciado
 
@@ -323,10 +323,33 @@ sequenceDiagram
 ```
 
 #### 3.2.4 Modelo de Concurrencia en Tiempo de Ejecución
-* **Proceso único Node.js + SQLite en modo WAL (`PRAGMA journal_mode = WAL`):**
-  * En modo *Write-Ahead Logging*, los lectores no bloquean a los escritores ni los escritores bloquean a los lectores.
-  * El driver `better-sqlite3` ejecuta cada sentencia preparada o bloque `db.transaction()` de manera síncrona y atómica en el hilo de Node.js en fracciones de milisegundo (para el volumen de datos del campus: cientos de negocios y pocos miles de productos), evitando condiciones de carrera (*race conditions*) entre lecturas y escrituras concurrentes sin necesidad de bloqueos distribuidos.
-  * `PRAGMA busy_timeout = 5000` garantiza que si el proceso de respaldo o una herramienta externa abre el archivo simultáneamente, SQLite espere hasta 5 segundos antes de devolver `SQLITE_BUSY`.
+* **API asíncrona con pool PostgreSQL:** cada transacción toma un cliente del pool y lo libera en finally. AsyncLocalStorage mantiene repositorios y notificaciones en la misma conexión. Savepoints permiten anidamiento. Un bloqueo asesor transaccional por esquema serializa mutaciones para conservar las garantías anteriores. El arranque solo comprueba conexión; DDL y semilla se ejecutan explícitamente con db:init/db:seed.
+
+## 4. Mecanismos Arquitectónicos Transversales
+
+### 4.1 Defensa en Profundidad para Archivos Subidos (`config/upload.js`)
+
+| Tipo de Imagen | Carpeta Destino | ¿Expuesta en `/uploads`? | Quién puede leerla | Límite y Formatos |
+| ----- | ----- | ----- | ----- | ----- |
+| Foto de perfil (`HU-04`) | `backend/uploads/profiles/` | Sí (`/uploads/profiles/<uuid>.<ext>`) | Público | `image/jpeg`, `image/png`, `image/webp` (`<= 5 MB`) |
+| Foto de menú (`HU-03`) | `backend/uploads/menus/` | Sí (`/uploads/menus/<uuid>.<ext>`) | Público | `image/jpeg`, `image/png`, `image/webp` (`<= 5 MB`) |
+| Imagen de producto (`HU-02`) | `backend/uploads/products/` | Sí (`/uploads/products/<uuid>.<ext>`) | Público | `image/jpeg`, `image/png`, `image/webp` (`<= 5 MB`) |
+| Credencial UNISON (`HU-01`) | `backend/storage/credentials/` | **No (Prohibido)** | Solo `admin` vía `GET /api/admin/requests/:userId/credential` | `image/jpeg`, `image/png`, `image/webp` (`<= 5 MB`) |
+
+### 4.2 Tubería de Procesamiento de una Petición en Express 5
+
+```mermaid
+flowchart LR
+    Req["HTTP Request"] --> H["1. helmet + cors"]
+    H --> Body["2. express.json / multer"]
+    Body --> RL["3. rateLimit (si aplica)"]
+    RL --> Auth["4. requireAuth (si ruta protegida)"]
+    Auth --> Role["5. requireRole (si aplica)"]
+    Role --> Val["6. validate(zodSchema)"]
+    Val --> Ctrl["7. Controller -> Service -> Repository"]
+    Ctrl --> Res["8. ok(res, data, message, meta)"]
+    RL & Auth & Role & Val & Ctrl -. "throw / next(err)" .-> Err["errorHandler -> JSON { ok:false, error }"]
+```
 
 ---
 
@@ -335,14 +358,14 @@ sequenceDiagram
 | Workspace | Paquete / Carpeta | Estándar de Módulos | Propósito |
 | ----- | ----- | ----- | ----- |
 | Raíz (`/`) | `package.json` | npm workspaces | Orquestar `dev`, `test`, `build`, `lint` y `db:reset`. |
-| `backend/` | `src/config/` | ES Modules (`import`/`export`) | Variables de entorno (`env.js`), conexión SQLite (`db.js`) y `multer` (`upload.js`). |
+| `backend/` | `src/config/` | ES Modules (`import`/`export`) | Variables de entorno (`env.js`), pool PostgreSQL (`db.js`) y `multer` (`upload.js`). |
 | `backend/` | `src/middlewares/` | ES Modules | Seguridad, autenticación, roles, validación `zod`, límites de tasa y errores. |
 | `backend/` | `src/validators/` | ES Modules | Esquemas `zod` reutilizables de entrada HTTP. |
 | `backend/` | `src/repositories/` | ES Modules | Consultas SQL preparadas y nombradas (`:param`). |
 | `backend/` | `src/services/` | ES Modules | Lógica de negocio, transacciones, serializadores y tareas de mantenimiento. |
 | `backend/` | `src/controllers/` | ES Modules | Adaptadores HTTP delgados (`req` → servicio → `ok(res, ...)`). |
 | `backend/` | `src/routes/` | ES Modules | Definición de endpoints REST bajo `/api`. |
-| `backend/` | `tests/` | `node:test` + `supertest` | Pruebas de integración extremo a extremo sobre SQLite temporal. |
+| `backend/` | `tests/` | `node:test` + `supertest` | Pruebas de integración extremo a extremo sobre esquemas PostgreSQL aislados. |
 | `frontend/` | `src/context/` | React 19 JSX | Estado global (`AuthContext`, `FavoritesContext`, `ToastContext`). |
 | `frontend/` | `src/services/` | ES Modules | Cliente HTTP centralizado (`api.js`). |
 | `frontend/` | `src/components/` | React 19 JSX + Tailwind v4 | Componentes reutilizables divididos en `layout`, `routing`, `business`, `product`, `search` y `common`. |
@@ -361,8 +384,8 @@ flowchart TB
         end
 
         subgraph Disco["Almacenamiento en Disco Local"]
-            DBFile["backend/database/emprendebuho.sqlite (+ .sqlite-wal / .sqlite-shm)"]
-            BakDir["backend/database/backups/emprendebuho_YYYYMMDD_HHMMSS.sqlite"]
+            DBFile["Servidor PostgreSQL local o administrado (DATABASE_URL)"]
+            BakDir["backend/database/backups/emprendebuho_YYYYMMDD_HHMMSS.dump"]
             PubDir["backend/uploads/{profiles,menus,products}/*"]
             PrivDir["backend/storage/credentials/*"]
         end
@@ -420,7 +443,7 @@ flowchart LR
 
 ## 5. Matriz de Trazabilidad Arquitectónica (RF y RNF → Componentes)
 
-| Requerimiento | Componentes del Backend | Componentes del Frontend | Tablas SQLite Involucradas |
+| Requerimiento | Componentes del Backend | Componentes del Frontend | Tablas PostgreSQL Involucradas |
 | ----- | ----- | ----- | ----- |
 | **RF-01** (Aprobación de registro UNISON) | `auth.controller`, `admin.controller`, `auth.service`, `admin.service`, `config/upload` | `RegisterRequestPage`, `PendingRequestsPage`, `ApplicationStatusPage` | `users`, `businesses`, `business_schedules`, `notifications`, `audit_logs` |
 | **RF-02** (Login y gestión de perfil) | `auth.*`, `myBusiness.*`, `auth.middleware` | `LoginPage`, `AuthContext`, `EntrepreneurLayout`, `ProfileEditorPage` | `users`, `businesses`, `business_contacts`, `categories` |

@@ -4,7 +4,7 @@
 
 **Entidad Académica / Contexto:** Universidad de Sonora (UNISON), Campus Hermosillo
 
-**Stack Tecnológico Objetivo:** React (Frontend SPA Mobile-First) + Express.js (Backend API REST) + SQLite (Base de Datos Relacional Local)
+**Stack Tecnológico Objetivo:** React (Frontend SPA Mobile-First) + Express.js (Backend API REST) + PostgreSQL (Base de Datos Relacional Local)
 
 **Entorno de Ejecución:** Desarrollo 100% Local (Monorepo Cliente-Servidor sin dependencias de nube externas)
 
@@ -27,12 +27,12 @@ Dentro del campus de la Universidad de Sonora (UNISON), una gran cantidad de est
 
 Esta dispersión genera cuatro problemas críticos tanto para los emprendedores como para los consumidores universitarios:
 
-| Caso Detectado | Impacto en Emprendedores | Impacto en Consumidores | 
-| ----- | ----- | ----- | 
-| **Información poco precisa** | Menor alcance comercial y dependencia exclusiva de contactos previos. | Dificultad para comparar alternativas, precios y menús. | 
-| **Ubicación cambiante** | Pérdida de ventas potenciales mientras el vendedor se desplaza por el campus. | Pérdida de tiempo intentando localizar físicamente al vendedor. | 
-| **Horarios poco visibles** | Generación de expectativas incorrectas y mensajes repetitivos sobre disponibilidad. | Incertidumbre sobre si el negocio está atendiendo en ese instante. | 
-| **Ausencia de un directorio** | Poca continuidad de la identidad del negocio dentro de la comunidad. | El descubrimiento de la oferta depende puramente de la casualidad. | 
+| Caso Detectado | Impacto en Emprendedores | Impacto en Consumidores |
+| ----- | ----- | ----- |
+| **Información poco precisa** | Menor alcance comercial y dependencia exclusiva de contactos previos. | Dificultad para comparar alternativas, precios y menús. |
+| **Ubicación cambiante** | Pérdida de ventas potenciales mientras el vendedor se desplaza por el campus. | Pérdida de tiempo intentando localizar físicamente al vendedor. |
+| **Horarios poco visibles** | Generación de expectativas incorrectas y mensajes repetitivos sobre disponibilidad. | Incertidumbre sobre si el negocio está atendiendo en ese instante. |
+| **Ausencia de un directorio** | Poca continuidad de la identidad del negocio dentro de la comunidad. | El descubrimiento de la oferta depende puramente de la casualidad. |
 
 Adicionalmente, ante los lineamientos institucionales de la Universidad de Sonora para regular el comercio interno, se requiere una herramienta digital centralizada que identifique a los emprendedores pertenecientes a la comunidad estudiantil, organice su oferta y proteja su privacidad mediante ubicaciones voluntarias, temporales y configurables, sin pretender sustituir un permiso oficial.
 
@@ -66,7 +66,7 @@ Adicionalmente, ante los lineamientos institucionales de la Universidad de Sonor
 
 ## 2. Arquitectura Técnica y Estructura del Proyecto Local
 
-### 2.1 Decisiones Arquitectónicas del Stack (React + Express + SQLite)
+### 2.1 Decisiones Arquitectónicas del Stack (React + Express + PostgreSQL)
 
 El sistema se construye y ejecuta 100 % en local, sin servicios externos ni de pago. Son dos aplicaciones dentro de un monorepo (npm workspaces) que se comunican por una API REST JSON sobre HTTP.
 
@@ -81,7 +81,7 @@ flowchart LR
         STATIC["/uploads/* (imágenes públicas)"]
         JOBS["Tareas programadas (mantenimiento)"]
     end
-    DB[("SQLite emprendebuho.sqlite")]
+    DB[("PostgreSQL (DATABASE_URL)")]
     UP[["backend/uploads/ (público)"]]
     ST[["backend/storage/ (privado: credenciales)"]]
     SPA -- "proxy de Vite /api y /uploads" --> API
@@ -98,10 +98,10 @@ flowchart LR
 
 | Pieza | Versión | Notas obligatorias para los agentes |
 | ----- | ----- | ----- |
-| Node.js | **22 LTS o 24 LTS** | `better-sqlite3` publica binarios precompilados para Windows/macOS/Linux en estas versiones. |
+| Node.js | **22 LTS o 24 LTS** | Runtime JavaScript compatible con Express y pg. |
 | npm | ≥ 10 | Monorepo con `workspaces: ["backend", "frontend"]`. |
 | Express | **5.x** | Express 5 captura solo los errores de los handlers `async`, así que no hace falta `express-async-errors`. Las rutas comodín usan la sintaxis nueva (`/*splat`). |
-| better-sqlite3 | última estable | Driver **síncrono**. No usar `sqlite3` ni ORMs. |
+| pg | ^8.16.3 | Controlador asíncrono PostgreSQL sin ORM. better-sqlite3 solo en desarrollo para importar SQLite. |
 | zod | **4.x** | Única librería de validación (no usar `express-validator`). |
 | React | **19** | Componentes funcionales y hooks. |
 | Vite | última estable | Plantilla `react`, con JavaScript (no TypeScript). |
@@ -109,8 +109,8 @@ flowchart LR
 | Tailwind CSS | **4.x** con `@tailwindcss/vite` | Sin `tailwind.config.js` ni `postcss.config.js`. Los tokens se declaran con `@theme` en `src/styles/index.css` (§6.1). |
 | lucide-react | última estable | Iconografía. Las categorías guardan el nombre del ícono (`'Cake'`, `'Coffee'`…). |
 
-**Backend, dependencias de producción (lista cerrada):** `express`, `better-sqlite3`, `cors`, `helmet`, `dotenv`, `bcryptjs`, `jsonwebtoken`, `multer`, `zod`, `slugify`, `express-rate-limit`.
-**Backend, dependencias de desarrollo:** `nodemon`, `supertest`. Las pruebas usan el runner nativo `node:test`.
+**Backend, dependencias de producción (lista cerrada):** `express`, `pg`, `cors`, `helmet`, `dotenv`, `bcryptjs`, `jsonwebtoken`, `multer`, `zod`, `slugify`, `express-rate-limit`.
+**Backend, dependencias de desarrollo:** `nodemon`, `supertest`, `better-sqlite3` (solo migración y pruebas). Las pruebas usan el runner nativo `node:test`.
 **Frontend, dependencias de producción:** `react`, `react-dom`, `react-router`, `lucide-react`.
 **Frontend, dependencias de desarrollo:** `vite`, `@vitejs/plugin-react`, `tailwindcss`, `@tailwindcss/vite`, `eslint` (configuración de la plantilla Vite).
 **Raíz:** `concurrently` (desarrollo).
@@ -120,14 +120,14 @@ flowchart LR
 #### 2.1.2 Backend (`backend/`)
 
 * **Runtime y framework:** Node.js con Express 5, módulos ES (`"type": "module"`).
-* **Base de datos:** SQLite 3 mediante `better-sqlite3`, en `backend/database/emprendebuho.sqlite`. Al abrir la conexión se ejecutan `PRAGMA foreign_keys = ON;`, `PRAGMA journal_mode = WAL;` y `PRAGMA busy_timeout = 5000;`, y se registra la función SQL `normalizar()` (§4.3).
+* **Base de datos:** PostgreSQL 16+ mediante `pg`, conectado por `DATABASE_URL`, con pool y operaciones asíncronas. Esquema y semillas se inicializan explícitamente con `db:init` y `db:seed` (§4.3).
 * **Capas:** `routes` (define rutas y middlewares) → `controllers` (traduce HTTP ↔ servicio y no contiene SQL) → `services` (reglas de negocio y transacciones) → `repositories` (todas las sentencias SQL, siempre parametrizadas). Ningún controlador ejecuta SQL directamente.
 * **Autenticación y seguridad:** JWT (`jsonwebtoken`, HS256, expiración `JWT_EXPIRES_IN`), contraseñas con `bcryptjs` (10 *salt rounds*), validación de entrada con `zod`, cabeceras con `helmet`, CORS restringido a `CORS_ORIGIN` y *rate limiting* con `express-rate-limit` (§5.0.6). El middleware de autenticación **consulta al usuario en cada petición**. Así la suspensión, la baja o el cambio de contraseña invalidan la sesión de inmediato (`users.token_version`).
 * **Almacenamiento de archivos:** `multer` en disco con nombres aleatorios (`crypto.randomUUID()` + extensión según el MIME). Solo se aceptan `image/jpeg`, `image/png` e `image/webp`, de máximo 5 MB.
   * **Públicas** (servidas estáticamente en `/uploads`): `backend/uploads/profiles/`, `menus/` y `products/`.
   * **Privadas** (nunca se sirven estáticamente): `backend/storage/credentials/`. Solo se entregan con `GET /api/admin/requests/:userId/credential` a un administrador autenticado.
 * **Notificaciones y recuperación de contraseña en local:** como no hay SMTP, las notificaciones de aprobación, rechazo, suspensión y moderación (HU-27) se guardan en `notifications` y se muestran en la bandeja de la app. El estado de una solicitud se puede consultar con correo + matrícula (`POST /api/auth/request-status`). Los códigos de recuperación (HU-32) se imprimen en la consola del servidor con un formato fijo que simula un correo. Si `NODE_ENV=development`, también se devuelven en la respuesta para mostrarlos en un recuadro de "modo desarrollo".
-* **Zona horaria:** SQLite guarda las fechas en UTC (`CURRENT_TIMESTAMP`). La API las devuelve en ISO-8601 con sufijo `Z`. El "ahora" de negocio (día de la semana y hora `HH:MM` para horarios) se calcula **siempre en el backend** con `America/Hermosillo` (UTC-7 fijo, sin horario de verano) mediante `Intl.DateTimeFormat`.
+* **Zona horaria:** PostgreSQL guarda las fechas en UTC (`CURRENT_TIMESTAMP`). La API las devuelve en ISO-8601 con sufijo `Z`. El "ahora" de negocio (día de la semana y hora `HH:MM` para horarios) se calcula **siempre en el backend** con `America/Hermosillo` (UTC-7 fijo, sin horario de verano) mediante `Intl.DateTimeFormat`.
 
 #### 2.1.3 Frontend (`frontend/`)
 
@@ -160,7 +160,7 @@ emprendebuho/
 │   ├── database/
 │   │   ├── schema.sql                # DDL completo (§4.1)
 │   │   ├── seed.js                   # Datos semilla con hashes bcrypt e imágenes placeholder (§4.4)
-│   │   └── backups/                  # Respaldos .sqlite generados por mantenimiento
+│   │   └── backups/                  # Respaldos .dump generados por mantenimiento
 │   ├── uploads/                      # PÚBLICO vía /uploads
 │   │   ├── profiles/
 │   │   ├── menus/
@@ -179,14 +179,14 @@ emprendebuho/
 │       ├── server.js                 # Arranque HTTP + programación de tareas de mantenimiento
 │       ├── config/
 │       │   ├── env.js                # Lee y valida variables de entorno con zod
-│       │   ├── db.js                 # Conexión, PRAGMAs, normalizar(), schema.sql, seed si BD vacía
+│       │   ├── db.js                 # Pool PostgreSQL, parámetros nombrados y transacciones asíncronas
 │       │   └── upload.js             # Instancias multer: publicImage(subdir), credentialImage
 │       ├── middlewares/
 │       │   ├── auth.middleware.js    # requireAuth: JWT + usuario vigente + token_version
 │       │   ├── role.middleware.js    # requireRole('emprendedor' | 'admin')
 │       │   ├── validate.middleware.js# validate({ body, query, params }) con zod
 │       │   ├── rateLimit.middleware.js
-│       │   └── error.middleware.js   # notFound + errorHandler (traduce AppError, ZodError, Multer, SQLite)
+│       │   └── error.middleware.js   # notFound + errorHandler (traduce AppError, ZodError, Multer, PostgreSQL)
 │       ├── utils/
 │       │   ├── AppError.js           # class AppError(status, code, message, details)
 │       │   ├── response.js           # ok(res, data, message, meta)
@@ -263,7 +263,8 @@ NODE_ENV=development
 CORS_ORIGIN=http://localhost:5173
 JWT_SECRET=cambia_esto_por_una_cadena_larga_y_aleatoria
 JWT_EXPIRES_IN=7d
-DB_PATH=./database/emprendebuho.sqlite
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/emprendebuho
+DB_POOL_MAX=5
 UPLOAD_DIR=./uploads
 STORAGE_DIR=./storage
 BACKUP_DIR=./database/backups
@@ -274,7 +275,7 @@ MAINTENANCE_INTERVAL_HOURS=12
 REPORT_IP_SALT=cambia_esto_tambien
 ```
 
-`config/env.js` valida estas variables con zod al arrancar. Si falta una obligatoria, el proceso termina con un mensaje claro. Las pruebas usan `DB_PATH` apuntando a un archivo temporal.
+`config/env.js` valida estas variables con zod al arrancar. Si falta una obligatoria, el proceso termina con un mensaje claro. Las pruebas requieren `TEST_DATABASE_URL` y crean un esquema aislado por fixture.
 
 ### 2.4 Scripts del Monorepo
 
@@ -285,7 +286,7 @@ REPORT_IP_SALT=cambia_esto_tambien
 | raíz | `npm test` | Ejecuta `npm test -w backend` (`node --test tests/`). |
 | raíz | `npm run build` | `vite build` del frontend. |
 | raíz | `npm run lint` | ESLint del frontend. |
-| raíz | `npm run db:reset` | Borra el `.sqlite` local y los archivos subidos (conservando los `.gitkeep`) y vuelve a crear esquema y semilla. |
+| raíz | `npm run db:reset` | Reinicia las tablas y secuencias en desarrollo con `--confirm-reset`; conserva los archivos. |
 
 ## 3. Catálogo Completo de Requerimientos e Historias de Usuario
 
@@ -321,7 +322,7 @@ REPORT_IP_SALT=cambia_esto_tambien
 
 4. **RNF-04 (Identidad Visual UNISON):** Aplicación estricta de la paleta de colores institucional de la Universidad de Sonora (Azul `#002D62`, Dorado `#F2A900`, Blanco `#FFFFFF`).
 
-5. **RNF-05 (Manejo de Errores Claros):** Prohibido exponer trazas crudas de SQLite o códigos HTTP crípticos al usuario. Toda falla de validación, red o permisos debe presentarse en español con un mensaje claro y accionable.
+5. **RNF-05 (Manejo de Errores Claros):** Prohibido exponer trazas crudas de PostgreSQL o códigos HTTP crípticos al usuario. Toda falla de validación, red o permisos debe presentarse en español con un mensaje claro y accionable.
 
 6. **RNF-06 (Privacidad Estricta del Emprendedor):** Los consumidores **únicamente** podrán visualizar la información que el emprendedor haya decidido hacer pública. Si `mostrar_ubicacion = 0`, el backend debe omitir `campus_zone_id`, nombre de zona y descripción de ubicación en las respuestas públicas de la API.
 
@@ -329,7 +330,7 @@ REPORT_IP_SALT=cambia_esto_tambien
 
 > **Nota sobre la Historia de Usuario 20 (HU-20):** En la documentación del proyecto, el identificador `HU-20` se utiliza en la tabla de prioridades para *"Ocultar publicaciones de productos que incumplan las reglas"* y en la tabla de asignación para *"Revisar y aprobar las solicitudes de registro de emprendedores (asegurando pertenencia a la UNISON)"*. Ambas funcionalidades son obligatorias y se especifican a continuación como **HU-20A** y **HU-20B**.
 
-| ID | Rol | Historia de Usuario (Objetivo y Beneficio) | Prioridad / Complejidad | Especificación Técnica de Implementación (React + Express + SQLite) | 
+| ID | Rol | Historia de Usuario (Objetivo y Beneficio) | Prioridad / Complejidad | Especificación Técnica de Implementación (React + Express + PostgreSQL) |
 | ----- | ----- | ----- | ----- | ----- |
 | **HU-01** | Emprendedor | Solicitar hacer una cuenta para registrar mi negocio en la app. | Alta / Alta | Vista `/registro` (`RegisterRequestPage`). `POST /api/auth/register-request` (`multipart/form-data`): `nombre_completo`, `email_institucional` (**obligatorio**, dominio en `ALLOWED_EMAIL_DOMAINS` = `@unison.mx`), `matricula_unison` (**obligatoria**, 9 dígitos), `password` (8–72 caracteres, al menos una letra y un número), `credencial` (**imagen obligatoria**, se guarda en `storage/credentials/`), `nombre_negocio` y `category_id` (categoría activa). En una transacción crea `users` (`estado_cuenta = 'pendiente'`), `businesses` (slug único) y las 7 filas de `business_schedules` (cerradas). Si el correo o la matrícula pertenecen a una cuenta `rechazada` o `eliminada`, **reutiliza** la fila y la regresa a `pendiente`. |
 | **HU-02** | Emprendedor | Publicar el catálogo de mi negocio (una imagen y descripción por producto) para que el cliente visualice mis ofertas. | Alta / Alta | `POST /api/my-business/products` (`multipart/form-data`: `nombre`, `descripcion`, `precio`, `imagen` **obligatoria**). Guarda la imagen en `/uploads/products/` y crea el producto con `estado = 'activo'`. Lo gestiona `CatalogManagerPage` (`/panel/catalogo`) con `ProductFormModal`. |
@@ -355,7 +356,7 @@ REPORT_IP_SALT=cambia_esto_tambien
 | **HU-22** | Administrador | Suspender temporalmente una cuenta para aplicar sanciones cuando se incumplan reglas de la plataforma. | Media / Alta | `PATCH /api/admin/users/:userId/suspend` con `{ "suspend": true, "motivo": "...", "hasta": "YYYY-MM-DD" (opcional) }`. Pone `estado_cuenta = 'suspendida'`, `motivo_estado`, `suspendida_hasta`, `esta_abierto = 0` e incrementa `token_version` (cierra sesiones). El negocio desaparece del directorio. `{ "suspend": false }` la reactiva; el mantenimiento reactiva sola la cuenta al vencer `suspendida_hasta`. No se puede suspender a un administrador. |
 | **HU-23** | Consumidor | Buscar emprendimientos por zona del campus para ubicar negocios cercanos sin necesitar la ubicación exacta del vendedor. | Media / Media | Filtro `?zone_id=` en `GET /api/businesses` y `GET /api/products`: solo negocios con `mostrar_ubicacion = 1` y `campus_zone_id = :zone_id`. `CampusZoneSelector` muestra un **mapa esquemático SVG** con 8 zonas fijas en 9 polígonos definidos por `codigo` en `frontend/src/data/campusZoneShapes.js`, según `docs/mapa-campus-zonas.md` (más una lista accesible equivalente). |
 | **HU-24** | Administrador | Gestionar los reportes enviados por los consumidores para tomar decisiones sobre cuentas denunciadas. | Media / Alta | Vista `/admin/reportes` (`ReportsManagerPage`). `PATCH /api/admin/reports/:reportId` con `{ "estado_reporte", "notas_admin", "accion_automatica": "ninguna" \| "ocultar_producto" \| "suspender_cuenta", "motivo_sancion" }`. En **una sola transacción** cambia el estado del reporte, ejecuta la acción, crea la notificación y registra la auditoría. `ocultar_producto` exige que el reporte tenga `product_id`. |
-| **HU-25** | Administrador | Dar mantenimiento general a la plataforma para asegurar su correcto funcionamiento. | Media / Media | Vista `/admin/mantenimiento` (`SystemMaintenancePage`). (1) `POST /api/admin/maintenance/run-inactivity-check` oculta negocios sin actividad en `INACTIVITY_DAYS_LIMIT` días; (2) `POST /api/admin/maintenance/backup` genera un respaldo con `db.backup()` y `GET /api/admin/maintenance/backups/:filename` lo descarga; (3) `GET /api/admin/maintenance/health` y `GET /api/admin/audit-logs` muestran métricas y bitácora; (4) `POST /api/admin/maintenance/cleanup-orphans` borra imágenes huérfanas. |
+| **HU-25** | Administrador | Dar mantenimiento general a la plataforma para asegurar su correcto funcionamiento. | Media / Media | Vista `/admin/mantenimiento` (`SystemMaintenancePage`). (1) `POST /api/admin/maintenance/run-inactivity-check` oculta negocios sin actividad en `INACTIVITY_DAYS_LIMIT` días; (2) `POST /api/admin/maintenance/backup` genera un respaldo con `pg_dump` y `GET /api/admin/maintenance/backups/:filename` lo descarga; (3) `GET /api/admin/maintenance/health` y `GET /api/admin/audit-logs` muestran métricas y bitácora; (4) `POST /api/admin/maintenance/cleanup-orphans` borra imágenes huérfanas. |
 | **HU-26** | Consumidor | Reportar un negocio con información falsa o inapropiada para ayudar a mantener el directorio confiable. | Media / Baja | Enlace *"Reportar este negocio"* en `/negocio/:slug` que abre `ReportModal` con motivo (`informacion_falsa`, `contenido_inapropiado`, `producto_prohibido`, `suplantacion`, `otro`), producto opcional y comentario (obligatorio, de 10 caracteres o más, si el motivo es `otro`). `POST /api/reports` sin cuenta, con *rate limit* por IP (5 por hora) y máximo 1 reporte por negocio por IP cada 24 h (`ip_hash`). |
 | **HU-27** | Emprendedor | Recibir una notificación cuando mi cuenta sea aprobada o rechazada para saber si ya puedo publicar. | Alta / Baja | Al aprobar o rechazar (HU-21), el backend inserta en `notifications` y escribe un log en consola. El emprendedor puede: (a) consultar sin sesión en `/estado-solicitud` (`POST /api/auth/request-status` con correo + matrícula); (b) ver la pantalla de estado al intentar iniciar sesión (HU-40); (c) ver la bandeja `/panel/notificaciones` (`GET /api/notifications`) una vez aprobado. |
 | **HU-28** | Emprendedor | Eliminar mi cuenta para dejar de aparecer en el directorio si cierro mi negocio. | Media / Baja | Vista `/panel/cuenta`, "Zona de peligro". `DELETE /api/auth/my-account` con `{ "password_actual": "..." }`. Pone `estado_cuenta = 'eliminada'`, `esta_abierto = 0` y `mostrar_ubicacion = 0`, e incrementa `token_version` (revoca la sesión). El negocio desaparece del directorio. El frontend borra el token y redirige a `/`. |
@@ -372,7 +373,15 @@ REPORT_IP_SALT=cambia_esto_tambien
 | **HU-39** | Consumidor | Filtrar emprendimientos por estado abierto o cerrado para evitar contactar negocios que no estén atendiendo. | Alta / Media | Interruptor *"Solo abiertos ahora"* en la barra de exploración: `?open_now=true` → `esta_abierto = 1` (y `open_now=false` → solo cerrados; sin el parámetro, todos). Hay un punto verde pulsante cuando está activo. |
 | **HU-40** | Emprendedor | Iniciar sesión en mi cuenta para administrar de manera segura la información de mi negocio. | Alta / Media | Vista `/login`. `POST /api/auth/login` con `{ "identificador": email o matrícula, "password" }`. Verifica con `bcrypt.compare`. Si la cuenta está `aprobada`, entrega el JWT, el usuario y el conteo de notificaciones no leídas, y redirige a `/panel` (emprendedor) o `/admin` (admin). Si está `pendiente`, `rechazada` o `suspendida`, responde `403` con `ACCOUNT_PENDING`, `ACCOUNT_REJECTED` o `ACCOUNT_SUSPENDED` y el motivo, **sin token**, y el frontend muestra `AccountStatusPage`. `eliminada` o credenciales incorrectas → `401 INVALID_CREDENTIALS`. Además, el inicio de sesión exitoso actualiza `last_login_at` y `last_activity_at` y pone `inactivo_oculto = 0`. |
 
-## 4. Diseño de Base de Datos Relacional en SQLite (DDL y Semillas)
+## 4. Diseño de Base de Datos Relacional en PostgreSQL (DDL y Semillas)
+
+### Actualización de motor (ADR PostgreSQL)
+
+Esta actualización sustituye las instrucciones anteriores de SQLite en este documento y en las guías anteriores. El DDL vigente es `backend/database/schema.sql`: PostgreSQL 16 o superior. Se autoriza `pg` como controlador de producción, sin ORM; `better-sqlite3` queda únicamente como dependencia de desarrollo para importar bases anteriores. Los repositorios conservan parámetros nombrados `:param`, compilados a parámetros posicionales por el adaptador. Todas las operaciones de datos son asíncronas. Las transacciones usan una sola conexión del pool y `BEGIN`/`COMMIT`/`ROLLBACK`; las anidadas usan savepoints. Las mutaciones se serializan mediante un bloqueo transaccional asesor para conservar las garantías de escritura anteriores.
+
+La conexión se configura mediante `DATABASE_URL` y `DB_POOL_MAX` (por defecto 5). TLS se configura en la URL del proveedor sin desactivar la verificación de certificados. No se usa `DB_PATH` para el backend. Se conservan las 11 tablas, nombres y contrato JSON; los indicadores siguen siendo enteros 0/1, los precios `NUMERIC(7,2)` se serializan como números y las fechas son `TIMESTAMPTZ` en UTC. `normalizar()` se implementa en SQL con normalización Unicode. Correo y categoría tienen índices únicos sobre `lower(...)`. SQLSTATE 23505 se traduce a CONFLICT; 23503, 23514, 23502 y 22P02 a VALIDATION_ERROR, sin exponer detalles internos.
+
+`npm run db:init` instala el esquema sin cargar cuentas demo; `npm run db:seed` carga la semilla explícitamente. El arranque no crea tablas ni usuarios. `npm run db:reset` solo reinicia una base de desarrollo y exige `--confirm-reset`. `npm run db:migrate:sqlite -- --source <archivo>` importa las 11 tablas en una transacción sobre un destino vacío, conserva IDs y reajusta secuencias; nunca modifica el origen. Los respaldos administrativos usan `pg_dump --format=custom`, extensión `.dump` y restauración con `pg_restore`; requieren las herramientas cliente PostgreSQL y almacenamiento persistente. La salud consulta `pg_database_size(current_database())`. Las pruebas usan un esquema PostgreSQL aislado por fixture mediante `TEST_DATABASE_URL`, nunca reinician la base compartida. La migración de archivos públicos y credenciales a almacenamiento externo queda fuera de esta migración de base de datos.
 
 ### 4.1 Modelo Entidad-Relación
 
@@ -426,31 +435,32 @@ erDiagram
 
 ### 4.2 Esquema Completo SQL (`backend/database/schema.sql`)
 
-`config/db.js` ejecuta este script completo en cada arranque. Es idempotente (`IF NOT EXISTS`). El esquema se validó con SQLite 3.50: compila y sus restricciones rechazan los casos inválidos descritos en `docs/decisiones-tecnicas.md`.
+DDL oficial PostgreSQL 16+, instalado explícitamente con `npm run db:init`.
 
 ```sql
-PRAGMA foreign_keys = ON;
-PRAGMA journal_mode = WAL;
+-- PostgreSQL 16+. Fechas UTC; indicadores enteros 0/1 compatibles con la API.
+CREATE OR REPLACE FUNCTION normalizar(text) RETURNS text LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
+  SELECT lower(trim(regexp_replace(normalize($1, NFD), U&'[\0300-\036f]', '', 'g')));
+$$;
 
 -- =====================================================================
--- EmprendeBúho — Esquema v2 (backend/database/schema.sql)
+-- EmprendeBúho — Esquema PostgreSQL (backend/database/schema.sql)
 -- Convenciones:
 --   * Fechas en UTC con formato 'YYYY-MM-DD HH:MM:SS' (CURRENT_TIMESTAMP).
 --   * Booleanos como INTEGER 0/1 con CHECK.
 --   * Categorías y zonas NUNCA se borran físicamente: se desactivan (FK RESTRICT).
 --   * Negocios y usuarios NUNCA se borran físicamente: se cambian de estado.
---   * La función normalizar(texto) la registra db.js con db.function() (ver §4.3).
 -- =====================================================================
 
 -- 1. Usuarios (Emprendedores y Administradores). Los consumidores NO tienen cuenta.
 CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
     nombre_completo TEXT NOT NULL CHECK (length(trim(nombre_completo)) BETWEEN 3 AND 120),
     matricula_unison TEXT UNIQUE CHECK (
         matricula_unison IS NULL
-        OR (length(matricula_unison) = 9 AND matricula_unison NOT GLOB '*[^0-9]*')
+        OR (length(matricula_unison) = 9 AND matricula_unison ~ '^[0-9]{9}$')
     ),
-    email_institucional TEXT NOT NULL UNIQUE COLLATE NOCASE,  -- dominio validado en la app (ALLOWED_EMAIL_DOMAINS)
+    email_institucional TEXT NOT NULL,  -- dominio validado en la app (ALLOWED_EMAIL_DOMAINS)
     password_hash TEXT NOT NULL,
     credencial_path TEXT,                                      -- ruta relativa dentro de backend/storage/ (NO pública)
     rol TEXT NOT NULL DEFAULT 'emprendedor' CHECK (rol IN ('emprendedor', 'admin')),
@@ -458,33 +468,33 @@ CREATE TABLE IF NOT EXISTS users (
         estado_cuenta IN ('pendiente', 'aprobada', 'rechazada', 'suspendida', 'eliminada')
     ),
     motivo_estado TEXT,                                        -- motivo de rechazo o suspensión
-    suspendida_hasta DATETIME,                                 -- NULL = suspensión indefinida (hasta que un admin la levante)
-    resuelto_por INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    fecha_resolucion DATETIME,
+    suspendida_hasta TIMESTAMPTZ,                                 -- NULL = suspensión indefinida (hasta que un admin la levante)
+    resuelto_por INTEGER REFERENCES users(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE,
+    fecha_resolucion TIMESTAMPTZ,
     token_version INTEGER NOT NULL DEFAULT 0,                  -- se incrementa para revocar todos los JWT emitidos
-    last_login_at DATETIME,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_login_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CHECK (rol = 'admin' OR (matricula_unison IS NOT NULL AND credencial_path IS NOT NULL)),
     CHECK (estado_cuenta NOT IN ('rechazada', 'suspendida') OR motivo_estado IS NOT NULL)
 );
 
 -- 2. Categorías del sistema (HU-05, HU-16, HU-19)
 CREATE TABLE IF NOT EXISTS categories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre TEXT NOT NULL UNIQUE COLLATE NOCASE CHECK (length(trim(nombre)) BETWEEN 2 AND 60),
-    slug TEXT NOT NULL UNIQUE CHECK (slug NOT GLOB '*[^a-z0-9-]*'),
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    nombre TEXT NOT NULL CHECK (length(trim(nombre)) BETWEEN 2 AND 60),
+    slug TEXT NOT NULL UNIQUE CHECK (slug ~ '^[a-z0-9-]+$'),
     descripcion TEXT NOT NULL DEFAULT '' CHECK (length(descripcion) <= 200),
     icono TEXT NOT NULL DEFAULT 'Store',                       -- nombre de ícono de lucide-react
     activa INTEGER NOT NULL DEFAULT 1 CHECK (activa IN (0, 1)),
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 3. Zonas del campus UNISON (HU-10, HU-23, HU-30)
 -- mapa_x / mapa_y: posición en una cuadrícula 0..100 del mapa esquemático (NULL = sin punto fijo).
 CREATE TABLE IF NOT EXISTS campus_zones (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
     codigo TEXT NOT NULL UNIQUE,
     nombre TEXT NOT NULL UNIQUE,
     descripcion TEXT NOT NULL DEFAULT '',
@@ -497,12 +507,12 @@ CREATE TABLE IF NOT EXISTS campus_zones (
 
 -- 4. Emprendimientos (HU-03, HU-04, HU-05, HU-06, HU-10, HU-12, HU-17)
 CREATE TABLE IF NOT EXISTS businesses (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
     user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE RESTRICT,
     campus_zone_id INTEGER REFERENCES campus_zones(id) ON DELETE RESTRICT,
     nombre_negocio TEXT NOT NULL CHECK (length(trim(nombre_negocio)) BETWEEN 2 AND 80),
-    slug TEXT NOT NULL UNIQUE CHECK (slug NOT GLOB '*[^a-z0-9-]*'),
+    slug TEXT NOT NULL UNIQUE CHECK (slug ~ '^[a-z0-9-]+$'),
     descripcion TEXT NOT NULL DEFAULT '' CHECK (length(descripcion) <= 1000),
     foto_perfil_url TEXT,                                      -- '/uploads/profiles/<uuid>.webp'
     foto_menu_url TEXT,                                        -- '/uploads/menus/<uuid>.jpg'
@@ -510,9 +520,9 @@ CREATE TABLE IF NOT EXISTS businesses (
     mostrar_ubicacion INTEGER NOT NULL DEFAULT 0 CHECK (mostrar_ubicacion IN (0, 1)),
     ubicacion_detalle TEXT NOT NULL DEFAULT '' CHECK (length(ubicacion_detalle) <= 120),
     inactivo_oculto INTEGER NOT NULL DEFAULT 0 CHECK (inactivo_oculto IN (0, 1)),
-    last_activity_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_activity_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CHECK (mostrar_ubicacion = 0 OR campus_zone_id IS NOT NULL)
 );
 
@@ -521,19 +531,19 @@ CREATE TABLE IF NOT EXISTS businesses (
 CREATE TABLE IF NOT EXISTS business_schedules (
     business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     dia_semana INTEGER NOT NULL CHECK (dia_semana BETWEEN 0 AND 6),
-    hora_apertura TEXT CHECK (hora_apertura IS NULL OR hora_apertura GLOB '[0-2][0-9]:[0-5][0-9]'),
-    hora_cierre TEXT CHECK (hora_cierre IS NULL OR hora_cierre GLOB '[0-2][0-9]:[0-5][0-9]'),
+    hora_apertura TEXT CHECK (hora_apertura IS NULL OR hora_apertura ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
+    hora_cierre TEXT CHECK (hora_cierre IS NULL OR hora_cierre ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
     cerrado_todo_el_dia INTEGER NOT NULL DEFAULT 1 CHECK (cerrado_todo_el_dia IN (0, 1)),
     PRIMARY KEY (business_id, dia_semana),
     CHECK (
         cerrado_todo_el_dia = 1
         OR (hora_apertura IS NOT NULL AND hora_cierre IS NOT NULL AND hora_apertura < hora_cierre)
     )
-) WITHOUT ROWID;
+);
 
 -- 6. Medios de contacto (HU-13, HU-29). Valores normalizados (ver §5.3 PUT /contacts).
 CREATE TABLE IF NOT EXISTS business_contacts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
     business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     tipo_contacto TEXT NOT NULL CHECK (
         tipo_contacto IN ('whatsapp', 'telefono', 'instagram', 'facebook', 'tiktok', 'otro')
@@ -542,32 +552,32 @@ CREATE TABLE IF NOT EXISTS business_contacts (
     etiqueta TEXT CHECK (etiqueta IS NULL OR length(etiqueta) <= 40),
     es_principal INTEGER NOT NULL DEFAULT 0 CHECK (es_principal IN (0, 1)),
     orden INTEGER NOT NULL DEFAULT 0,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (business_id, tipo_contacto, valor)
 );
 
 -- 7. Catálogo de productos (HU-02, HU-07, HU-08, HU-09, HU-11, HU-20A, HU-33, HU-37)
 CREATE TABLE IF NOT EXISTS products (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
     business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     nombre TEXT NOT NULL CHECK (length(trim(nombre)) BETWEEN 2 AND 80),
     descripcion TEXT NOT NULL CHECK (length(trim(descripcion)) BETWEEN 1 AND 500),
-    precio REAL NOT NULL CHECK (precio >= 0 AND precio <= 99999.99),
+    precio NUMERIC(7,2) NOT NULL CHECK (precio >= 0 AND precio <= 99999.99),
     imagen_url TEXT,                                           -- obligatoria al crear (validación de app); NULL tras borrado lógico
     estado TEXT NOT NULL DEFAULT 'activo' CHECK (
         estado IN ('activo', 'pausado', 'oculto_admin', 'eliminado')
     ),
     motivo_moderacion TEXT,
     moderado_por INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    moderado_at DATETIME,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    moderado_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CHECK (estado <> 'oculto_admin' OR motivo_moderacion IS NOT NULL)
 );
 
 -- 8. Reportes de consumidores anónimos (HU-24, HU-26, HU-35)
 CREATE TABLE IF NOT EXISTS reports (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
     business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
     motivo TEXT NOT NULL CHECK (
@@ -582,15 +592,15 @@ CREATE TABLE IF NOT EXISTS reports (
         accion_tomada IS NULL OR accion_tomada IN ('ninguna', 'ocultar_producto', 'suspender_cuenta')
     ),
     notas_admin TEXT,
-    resuelto_por INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    resolved_at DATETIME,
+    resuelto_por INTEGER REFERENCES users(id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TIMESTAMPTZ,
     CHECK (motivo <> 'otro' OR length(trim(descripcion)) >= 10)
 );
 
 -- 9. Notificaciones internas (HU-27, HU-20A, HU-22)
 CREATE TABLE IF NOT EXISTS notifications (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     tipo TEXT NOT NULL CHECK (
         tipo IN ('cuenta_aprobada', 'cuenta_rechazada', 'cuenta_suspendida', 'cuenta_reactivada',
@@ -599,29 +609,29 @@ CREATE TABLE IF NOT EXISTS notifications (
     titulo TEXT NOT NULL,
     mensaje TEXT NOT NULL,
     leida INTEGER NOT NULL DEFAULT 0 CHECK (leida IN (0, 1)),
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 10. Códigos de recuperación de contraseña (HU-32)
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     codigo_hash TEXT NOT NULL,                                 -- SHA-256 del código de 6 dígitos
-    expires_at DATETIME NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
     intentos INTEGER NOT NULL DEFAULT 0 CHECK (intentos BETWEEN 0 AND 5),
     usado INTEGER NOT NULL DEFAULT 0 CHECK (usado IN (0, 1)),
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 11. Bitácora de auditoría (HU-25). actor_id NULL = acción automática del sistema.
 CREATE TABLE IF NOT EXISTS audit_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
     actor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     accion TEXT NOT NULL,                                      -- p. ej. 'aprobar_cuenta', 'ocultar_producto', 'respaldo_bd'
     entidad_tipo TEXT NOT NULL,                                -- 'user' | 'business' | 'product' | 'report' | 'category' | 'system'
     entidad_id INTEGER,
-    detalles TEXT CHECK (detalles IS NULL OR json_valid(detalles)),
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    detalles TEXT CHECK (detalles IS NULL OR detalles::jsonb IS NOT NULL),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Índices
@@ -641,47 +651,28 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, leid
 CREATE INDEX IF NOT EXISTS idx_reset_tokens_user ON password_reset_tokens(user_id, usado);
 CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at);
 
--- Triggers de updated_at (SQLite no lo actualiza solo).
--- La condición WHEN evita recursión y respeta un updated_at asignado explícitamente.
-CREATE TRIGGER IF NOT EXISTS trg_users_updated_at AFTER UPDATE ON users
-FOR EACH ROW WHEN NEW.updated_at = OLD.updated_at
-BEGIN UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
 
-CREATE TRIGGER IF NOT EXISTS trg_categories_updated_at AFTER UPDATE ON categories
-FOR EACH ROW WHEN NEW.updated_at = OLD.updated_at
-BEGIN UPDATE categories SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email ON users (lower(email_institucional));
+CREATE UNIQUE INDEX IF NOT EXISTS uq_categories_nombre ON categories (lower(nombre));
 
-CREATE TRIGGER IF NOT EXISTS trg_businesses_updated_at AFTER UPDATE ON businesses
-FOR EACH ROW WHEN NEW.updated_at = OLD.updated_at
-BEGIN UPDATE businesses SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
-
-CREATE TRIGGER IF NOT EXISTS trg_products_updated_at AFTER UPDATE ON products
-FOR EACH ROW WHEN NEW.updated_at = OLD.updated_at
-BEGIN UPDATE products SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id; END;
+CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.updated_at IS NOT DISTINCT FROM OLD.updated_at THEN NEW.updated_at = CURRENT_TIMESTAMP; END IF;
+  RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS trg_users_updated_at ON users;
+CREATE TRIGGER trg_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+DROP TRIGGER IF EXISTS trg_categories_updated_at ON categories;
+CREATE TRIGGER trg_categories_updated_at BEFORE UPDATE ON categories FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+DROP TRIGGER IF EXISTS trg_businesses_updated_at ON businesses;
+CREATE TRIGGER trg_businesses_updated_at BEFORE UPDATE ON businesses FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+DROP TRIGGER IF EXISTS trg_products_updated_at ON products;
+CREATE TRIGGER trg_products_updated_at BEFORE UPDATE ON products FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 ```
 
-### 4.3 Inicialización de la Conexión (`backend/src/config/db.js`)
+### 4.3 Inicialización de la conexión
 
-Orden obligatorio al arrancar:
-
-1. Crear, si no existen, `database/`, `database/backups/`, `uploads/{profiles,menus,products}/` y `storage/credentials/`.
-2. Abrir `new Database(DB_PATH)` y ejecutar `PRAGMA foreign_keys = ON`, `PRAGMA journal_mode = WAL` y `PRAGMA busy_timeout = 5000`.
-3. Registrar la función de normalización **antes** de cualquier consulta:
-
-   ```js
-   // utils/text.js
-   export const normalizar = (s) =>
-     s == null ? null : String(s).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();
-   export const escapeLike = (s) => s.replace(/[\\%_]/g, (c) => '\\' + c);
-
-   // config/db.js
-   db.function('normalizar', { deterministic: true }, normalizar);
-   ```
-
-4. Ejecutar `schema.sql` con `db.exec()`.
-5. Si `SELECT COUNT(*) FROM users` es `0` y `NODE_ENV !== 'test'`, ejecutar `seed.js` (§4.4).
-
-> Las búsquedas usan `normalizar(columna) LIKE :q_like ESCAPE '\'`, donde `:q_like = '%' + escapeLike(normalizar(q)) + '%'`. Para el tamaño de un campus (cientos de negocios), el recorrido completo es aceptable y no hace falta FTS5.
+`config/db.js` mantiene un pool `pg`, configurado con `DATABASE_URL`, `DB_POOL_MAX` y zona UTC. `db.prepare(sql)` compila parámetros nombrados a `$1..$n` sin interpolar valores. `get/all/run` devuelven promesas; los INSERT que necesitan identificador declaran `RETURNING id`. Las transacciones se ejecutan con una conexión dedicada, AsyncLocalStorage y savepoints. El arranque comprueba la conexión y crea directorios, sin ejecutar DDL ni semillas. `db:init` instala el esquema, `db:seed` carga explícitamente las cuentas demo. La función SQL `normalizar()` elimina marcas diacríticas tras NFD y convierte a minúsculas.
 
 ### 4.4 Datos Semilla (`backend/database/seed.js`)
 
@@ -813,7 +804,7 @@ Todas las respuestas JSON devuelven uno de estos dos sobres:
   ```
   (`meta` solo se incluye en listados paginados).
 
-* **Error (RNF-05 — prohibido exponer trazas crudas de SQLite o stacks en producción):**
+* **Error (RNF-05 — prohibido exponer trazas crudas de PostgreSQL o stacks en producción):**
   ```json
   {
     "ok": false,
@@ -840,7 +831,7 @@ Todas las respuestas JSON devuelven uno de estos dos sobres:
 | `ACCOUNT_SUSPENDED` | 403 | Login o petición con `estado_cuenta = 'suspendida'` (incluye `motivo_estado` y `suspendida_hasta`). | Tu cuenta se encuentra suspendida temporalmente. |
 | `FORBIDDEN` | 403 | Rol insuficiente (`emprendedor` intentando acceder a `/api/admin/*` o viceversa). | No tienes permisos para realizar esta acción. |
 | `NOT_FOUND` | 404 | Recurso inexistente, eliminado, oculto o perteneciente a otro emprendedor. | No encontramos el recurso solicitado. |
-| `CONFLICT` | 409 | Duplicado de `email_institucional`, `matricula_unison`, `nombre` de categoría o contacto repetido (`SQLITE_CONSTRAINT_UNIQUE`). | Ya existe un registro con esos datos. |
+| `CONFLICT` | 409 | Duplicado de `email_institucional`, `matricula_unison`, `nombre` de categoría o contacto repetido (`SQLSTATE 23505`). | Ya existe un registro con esos datos. |
 | `PRODUCT_LOCKED` | 409 | Intento de pausar/activar un producto en `'oculto_admin'` o `'eliminado'`. | Este producto fue moderado por un administrador y no puede cambiarse de estado. |
 | `RESET_CODE_INVALID` | 400 | Código de recuperación incorrecto, vencido, ya usado o con `>= 5` intentos fallidos. | El código de recuperación es inválido o ha expirado. Solicita uno nuevo. |
 | `RATE_LIMITED` | 429 | Exceso de peticiones por IP (login, recuperación o reportes). | Has realizado demasiados intentos. Espera unos minutos antes de volver a intentarlo. |
@@ -851,7 +842,7 @@ Todas las respuestas JSON devuelven uno de estos dos sobres:
 * Se envía en la cabecera `Authorization: Bearer <token>`.
 * En **cada** petición protegida, `requireAuth`:
   1. Verifica la firma y vigencia del JWT.
-  2. Consulta en SQLite `SELECT id, rol, estado_cuenta, motivo_estado, suspendida_hasta, token_version FROM users WHERE id = :sub`.
+  2. Consulta en PostgreSQL `SELECT id, rol, estado_cuenta, motivo_estado, suspendida_hasta, token_version FROM users WHERE id = :sub`.
   3. Si el usuario no existe o `token_version !== payload.tv`, responde `401 UNAUTHORIZED`.
   4. Si `estado_cuenta === 'suspendida'`, responde `403 ACCOUNT_SUSPENDED` con `{ motivo_estado, suspendida_hasta }`.
   5. Si `estado_cuenta !== 'aprobada'`, responde `403` con el código correspondiente.
@@ -863,7 +854,7 @@ Todas las respuestas JSON devuelven uno de estos dos sobres:
 * El `ORDER BY` **nunca** interpola texto del usuario: se elige desde un diccionario fijo (`SORT_CLAUSES[sort]`).
 
 #### 5.0.5 Serialización de Fechas y Zona Horaria
-* Todas las columnas `DATETIME` de SQLite (`YYYY-MM-DD HH:MM:SS` en UTC) se serializan a ISO-8601 con sufijo `Z` (`2026-10-19T17:00:00Z`).
+* Todas las columnas `TIMESTAMPTZ` de PostgreSQL se serializan a ISO-8601 con sufijo `Z` (`2026-10-19T17:00:00Z`).
 * Para comparar horarios de atención (`business_schedules`), el backend obtiene el día y hora actuales en Hermosillo (`America/Hermosillo`, UTC-7 sin horario de verano) mediante `nowInHermosillo()` (`{ dow: 0..6, time: 'HH:MM' }`).
 
 #### 5.0.6 Límites de Tasa (`rateLimit.middleware.js`)
@@ -1187,7 +1178,7 @@ Resumen para las tarjetas del panel administrativo (`AdminDashboardPage`): conte
       "motivo_sancion": "Obligatorio cuando accion_automatica != ninguna"
     }
     ```
-  * Reglas ejecutadas en **una sola transacción SQLite**:
+  * Reglas ejecutadas en **una sola transacción PostgreSQL**:
     * Si `accion_automatica === 'ocultar_producto'`, el reporte debe tener `product_id` (si no, `400 VALIDATION_ERROR`) y se ejecuta la misma lógica de moderación de `5.4.4`, forzando `estado_reporte = 'resuelto_con_sancion'`.
     * Si `accion_automatica === 'suspender_cuenta'`, se ejecuta la misma lógica de suspensión de `5.4.3`, forzando `estado_reporte = 'resuelto_con_sancion'`.
     * Actualiza el reporte (`estado_reporte`, `accion_tomada`, `notas_admin`, `resuelto_por`, `resolved_at`) y registra en `audit_logs`.
@@ -1198,10 +1189,10 @@ Resumen para las tarjetas del panel administrativo (`AdminDashboardPage`): conte
 * **`PUT /api/admin/categories/:id`:** `{ nombre?, descripcion?, icono?, activa? }`. Si se desactiva (`activa = false`), los negocios existentes conservan su `category_id`, pero la categoría deja de ofrecerse a nuevos registros.
 
 #### 5.4.7 Mantenimiento del Sistema y Auditoría (HU-25)
-* **`GET /api/admin/maintenance/health`:** devuelve tamaño del archivo `.sqlite`, conteo de filas por tabla, negocios inactivos candidatos a ocultarse, archivos en `/uploads` y lista de respaldos disponibles.
+* **`GET /api/admin/maintenance/health`:** devuelve tamaño de la base PostgreSQL, conteo de filas por tabla, negocios inactivos candidatos a ocultarse, archivos en `/uploads` y lista de respaldos disponibles.
 * **`POST /api/admin/maintenance/run-inactivity-check`:** ejecuta el barrido de inactividad (§4.5.3) y el levantamiento de suspensiones vencidas; devuelve `{ ocultados: number, reactivados: number }`.
-* **`POST /api/admin/maintenance/backup`:** ejecuta `await db.backup(destPath)` hacia `backend/database/backups/emprendebuho_YYYYMMDD_HHMMSS.sqlite`, conserva los últimos `BACKUP_KEEP` respaldos y devuelve `{ filename, size_bytes, created_at }`.
-* **`GET /api/admin/maintenance/backups/:filename`:** valida que `filename` cumpla `^emprendebuho_\d{8}_\d{6}\.sqlite$` (prevención de *path traversal*) y descarga el archivo.
+* **`POST /api/admin/maintenance/backup`:** ejecuta `pg_dump --format=custom` hacia `backend/database/backups/emprendebuho_YYYYMMDD_HHMMSS.dump`, conserva los últimos `BACKUP_KEEP` respaldos y devuelve `{ filename, size_bytes, created_at }`.
+* **`GET /api/admin/maintenance/backups/:filename`:** valida que `filename` cumpla `^emprendebuho_\d{8}_\d{6}\.dump$` (prevención de *path traversal*) y descarga el archivo.
 * **`POST /api/admin/maintenance/cleanup-orphans`:** elimina de `uploads/` los archivos que no estén referenciados en `businesses` ni `products` y que tengan más de 1 hora de antigüedad.
 * **`GET /api/admin/audit-logs`:** listado paginado de `audit_logs` con filtro opcional por `accion` y `entidad_tipo`.
 
@@ -1293,7 +1284,7 @@ El archivo `frontend/src/styles/index.css` importa Tailwind CSS v4 y expone los 
    * `/admin/reportes` (`ReportsManagerPage.jsx` — `HU-24`, `HU-35`): tabla filtrable por estado, insignia de reincidencias (`reportes_del_negocio`) y modal de resolución con acción integrada (*Sin sanción*, *Ocultar producto*, *Suspender cuenta*).
    * `/admin/moderacion` (`ModerationProductsPage.jsx` — `HU-20A`): buscador de productos de cualquier negocio, filtro de `oculto_admin` (destacando los que tienen `editado_tras_moderacion = true`) y acciones **Ocultar con motivo** / **Restaurar**.
    * `/admin/categorias` (`CategoriesManagerPage.jsx` — `HU-16`): tabla CRUD con contador de negocios asociados e interruptor `activa`.
-   * `/admin/mantenimiento` (`SystemMaintenancePage.jsx` — `HU-25`): estado de salud de la base de datos, botones para ejecutar barrido de inactividad, limpiar archivos huérfanos, crear y descargar respaldos `.sqlite`, y tabla paginada de `audit_logs`.
+   * `/admin/mantenimiento` (`SystemMaintenancePage.jsx` — `HU-25`): estado de salud de la base de datos, botones para ejecutar barrido de inactividad, limpiar archivos huérfanos, crear y descargar respaldos `.dump`, y tabla paginada de `audit_logs`.
 
 ### 6.3 Tabla Completa de Rutas del Frontend (`App.jsx`)
 
@@ -1368,7 +1359,7 @@ El archivo `frontend/src/styles/index.css` importa Tailwind CSS v4 y expone los 
 
 ### 7.2 Estrategia Obligatoria de Pruebas Automatizadas (`backend/tests/`)
 
-El backend se verifica con `node --test` y `supertest` contra una base de datos SQLite temporal por suite (`helpers/testApp.js`). Antes de dar por terminada la fase de backend, `npm test` debe pasar al 100 % cubriendo como mínimo estos casos:
+El backend se verifica con `node --test` y `supertest` contra un esquema PostgreSQL aislado por fixture (`helpers/testApp.js`). Antes de dar por terminada la fase de backend, `npm test` debe pasar al 100 % cubriendo como mínimo estos casos:
 
 1. **`auth.test.js` (HU-01, 27, 28, 32, 40):**
    * Rechaza registro con correo fuera de `@unison.mx`, matrícula que no sea de 9 dígitos o sin archivo `credencial`.
@@ -1396,7 +1387,7 @@ El backend se verifica con `node --test` y `supertest` contra una base de datos 
    * La credencial estudiantil **no** es accesible públicamente y solo responde `200` en `GET /api/admin/requests/:userId/credential` con token de admin.
    * Al suspender una cuenta (`PATCH /api/admin/users/:id/suspend`), el JWT que ya tenía el emprendedor deja de funcionar de inmediato (`403 ACCOUNT_SUSPENDED`) y su negocio desaparece de `GET /api/businesses`.
    * Resolver un reporte con `accion_automatica = 'ocultar_producto'` o `'suspender_cuenta'` aplica la sanción, crea la notificación y escribe en `audit_logs` en una sola transacción.
-   * El barrido de inactividad oculta negocios con `last_activity_at` antiguo y el respaldo `POST /api/admin/maintenance/backup` genera un archivo `.sqlite` válido.
+   * El barrido de inactividad oculta negocios con `last_activity_at` antiguo y el respaldo `POST /api/admin/maintenance/backup` genera un archivo `.dump` válido.
 
 ### 7.3 Lista de Verificación de Entrega (Definition of Done)
 
@@ -1405,4 +1396,4 @@ Antes de dar por concluida la construcción del software, el equipo o los agente
 1. `npm test` ejecuta todas las suites de integración del backend en verde (`0 fail`) y `npm run build` compila el frontend de producción sin errores.
 2. Un **Consumidor anónimo** (sin iniciar sesión) puede explorar el directorio, buscar por nombre de negocio o de producto (con y sin acentos), filtrar por categoría, zona del campus (mapa esquemático), horario, rango de precio y estado abierto/cerrado, ordenar resultados, ver el perfil completo con foto de menú ampliable y catálogo, guardar favoritos en su navegador, abrir los enlaces de contacto directo (WhatsApp/Llamada/Redes) en máximo 2 clics desde la portada y enviar un reporte sobre un negocio.
 3. Un **Emprendedor** puede solicitar su cuenta con correo `@unison.mx`, matrícula de 9 dígitos y foto de credencial, consultar el estado de su solicitud, iniciar sesión una vez aprobado, recuperar su contraseña localmente, alternar en tiempo real entre **Abierto** y **Cerrado**, activar o desactivar su ubicación en el campus (comprobando que al desactivarla desaparece de las respuestas públicas de la API), editar su foto de perfil, foto de menú, descripción, categoría, horarios y medios de contacto, crear/editar/pausar/eliminar productos con precio e imagen, previsualizar su perfil como consumidor, leer sus notificaciones y dar de baja su cuenta.
-4. Un **Administrador** puede iniciar sesión, revisar la credencial estudiantil de forma privada y aprobar o rechazar solicitudes pendientes de estudiantes UNISON, gestionar las categorías del sistema, revisar y resolver reportes enviados por consumidores (aplicando sanciones directas), ocultar o restaurar productos moderados, suspender temporalmente o reactivar cuentas y ejecutar las herramientas de mantenimiento, auditoría y respaldo de la base de datos SQLite local.
+4. Un **Administrador** puede iniciar sesión, revisar la credencial estudiantil de forma privada y aprobar o rechazar solicitudes pendientes de estudiantes UNISON, gestionar las categorías del sistema, revisar y resolver reportes enviados por consumidores (aplicando sanciones directas), ocultar o restaurar productos moderados, suspender temporalmente o reactivar cuentas y ejecutar las herramientas de mantenimiento, auditoría y respaldo de la base de datos PostgreSQL local.

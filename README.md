@@ -8,13 +8,13 @@ Los importes se expresan en pesos mexicanos (MXN) y los horarios se calculan con
 
 Monorepo JavaScript con npm workspaces (`backend` y `frontend`):
 
-- **Backend:** Node.js, Express 5 y SQLite mediante `better-sqlite3`, sin ORM. Autenticación JWT, contraseñas con `bcryptjs`, validación con Zod y archivos con Multer.
+- **Backend:** Node.js, Express 5 y PostgreSQL 16+ mediante `pg`, sin ORM. Autenticación JWT, contraseñas con `bcryptjs`, validación con Zod y archivos con Multer.
 - **Frontend:** React 19, React Router 7, Vite, Tailwind CSS 4 mediante `@tailwindcss/vite` e iconos de Lucide.
 - **Pruebas:** ejecutor integrado `node --test` y Supertest.
 
 El prototipo integra el directorio público, autenticación, panel del emprendedor y panel administrativo. Las rutas públicas incluyen búsqueda, filtros, favoritos y perfiles; los paneles permiten gestionar negocios, solicitudes, moderación y mantenimiento. Consulta [la verificación F4](docs/verificacion-f4.md) para distinguir las pruebas ejecutadas de las comprobaciones pendientes.
 
-La SPA consume `/api` mediante el cliente `fetch`. El backend separa rutas, controladores, servicios y repositorios con SQL preparado. Las operaciones relacionadas se realizan en transacciones SQLite; cada mutación administrativa registra auditoría. Los JWT se verifican contra `token_version`, lo que permite revocarlos inmediatamente. Las credenciales estudiantiles permanecen fuera de los archivos públicos y la ubicación solo se publica cuando su propietario lo permite.
+La SPA consume `/api` mediante el cliente `fetch`. El backend separa rutas, controladores, servicios y repositorios con SQL preparado. Las operaciones relacionadas se realizan en transacciones PostgreSQL; cada mutación administrativa registra auditoría. Los JWT se verifican contra `token_version`, lo que permite revocarlos inmediatamente. Las credenciales estudiantiles permanecen fuera de los archivos públicos y la ubicación solo se publica cuando su propietario lo permite.
 
 ## Requisitos previos
 
@@ -29,7 +29,7 @@ node --version
 npm --version
 ```
 
-SQLite funciona como archivo local: no requiere instalar ni iniciar un servidor de base de datos separado. `better-sqlite3` es un módulo nativo; si no hay un binario precompilado compatible, su instalación requiere herramientas de compilación de C++.
+Se requiere un servidor PostgreSQL local o administrado y una base vacía creada previamente. Para respaldos administrativos instala `pg_dump` y `pg_restore` de la misma versión mayor del servidor o una compatible y agrégalos al PATH.
 
 ## Instalación desde cero
 
@@ -43,7 +43,7 @@ npm install
 
 Una sola instalación en la raíz instala las dependencias de ambos workspaces. No es necesario instalar Vite o nodemon globalmente.
 
-La raíz incluye una excepción `allowScripts` limitada a `better-sqlite3@13.0.3`: evita que npm 11.19 intente recompilar innecesariamente el paquete, que ya distribuye binarios nativos. No desactiva los scripts de los demás paquetes. La instalación se comprobó en Windows x64 con Node.js 24.21.0 y npm 11.19.0. Consulta la decisión F4-01 en [decisiones técnicas](docs/decisiones-tecnicas.md) antes de actualizar esa dependencia o utilizar una plataforma sin binario compatible.
+`better-sqlite3` es una dependencia de desarrollo utilizada solo por la importación de bases anteriores y sus pruebas; el backend de producción usa `pg` y puede instalarse con `npm ci --omit=dev`.
 
 ### Variables de entorno
 
@@ -68,10 +68,12 @@ Si `backend/.env` ya existe, conserva su configuración en lugar de sobrescribir
 | `CORS_ORIGIN` | `http://localhost:5173` | Origen permitido para el frontend. |
 | `JWT_SECRET` | `cambia_esto_por_una_cadena_larga_y_aleatoria` | Sustituir por un secreto aleatorio de al menos 32 caracteres. |
 | `JWT_EXPIRES_IN` | `7d` | Vigencia del token; número seguido de `s`, `m`, `h` o `d`. |
-| `DB_PATH` | `./database/emprendebuho.sqlite` | Archivo SQLite. |
+| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/emprendebuho` | URL de conexión PostgreSQL; configura TLS según tu proveedor. |
+| `DB_POOL_MAX` | `5` | Máximo de conexiones por proceso. |
+| `TEST_DATABASE_URL` | Sin valor predeterminado | Base de pruebas con permiso para crear esquemas. |
 | `UPLOAD_DIR` | `./uploads` | Imágenes públicas. |
 | `STORAGE_DIR` | `./storage` | Almacenamiento privado, incluidas credenciales. |
-| `BACKUP_DIR` | `./database/backups` | Respaldos SQLite. |
+| `BACKUP_DIR` | `./database/backups` | Respaldos PostgreSQL `.dump`. |
 | `BACKUP_KEEP` | `10` | Cantidad de respaldos que se conservan. |
 | `ALLOWED_EMAIL_DOMAINS` | `unison.mx` | Dominios institucionales permitidos, separados por comas. |
 | `INACTIVITY_DAYS_LIMIT` | `30` | Límite de días para el tratamiento de inactividad. |
@@ -82,19 +84,36 @@ Las rutas relativas se resuelven desde `backend/`. El directorio público de arc
 
 El frontend funciona sin un archivo de entorno adicional: su cliente utiliza `/api`. La variable opcional existente `VITE_API_BASE_URL` permite cambiar esa base, pero no es necesaria con el proxy local. Cualquier variable `VITE_*` utilizada por el cliente es pública y no debe contener secretos.
 
-### Inicializar SQLite y las semillas
+### Inicializar PostgreSQL y las semillas
 
-Con el backend detenido, ejecuta desde la raíz:
+Configura DATABASE_URL en backend/.env. La base debe existir; por ejemplo, en una instalación local: `createdb -U postgres emprendebuho`. Para crear tablas sin cuentas demo:
 
 ```sh
-npm run db:reset
+npm run db:init
 ```
 
-**Este comando es destructivo:** recrea la base configurada y elimina los archivos de los directorios configurados de imágenes públicas y almacenamiento privado, salvo `.gitkeep`. Conserva el directorio de respaldos. Úsalo para una instalación nueva o cuando quieras descartar los datos locales, no como paso habitual de arranque.
+En desarrollo puedes cargar explícitamente 8 categorías, 9 zonas, 5 usuarios, 4 negocios y 9 productos con `npm run db:seed`. El arranque normal no modifica el esquema ni carga cuentas demo. `npm run db:reset -- --confirm-reset` reinicia tablas y secuencias en desarrollo; conserva archivos y está bloqueado en producción.
 
-El proceso aplica `backend/database/schema.sql` y carga `backend/database/seed.js`: 8 categorías, 9 zonas, 5 usuarios iniciales, 4 negocios, 9 productos, 2 reportes y sus horarios. Con la configuración predeterminada, el archivo resultante es `backend/database/emprendebuho.sqlite`.
+### Importar una base SQLite existente
 
-El arranque normal también inicializa el esquema y, fuera de pruebas, carga las semillas si no hay usuarios. No borra los datos existentes ni sustituye una migración de esquema.
+Detén las escrituras en el backend anterior y conserva una copia de la base y sus archivos. Apunta DATABASE_URL a un destino PostgreSQL vacío y ejecuta desde la raíz:
+
+```sh
+npm run db:migrate:sqlite -- --source C:/ruta/emprendebuho.sqlite
+```
+
+El comando importa las 11 tablas en una transacción, conserva IDs, fechas UTC, referencias y secuencias. Comprueba integridad del origen, rechaza un destino con datos y abre SQLite en modo de solo lectura. No traslada archivos: conserva uploads/ y storage/ con las mismas rutas. Si falla una restricción, se revierte la carga completa; no reinicies ni borres el origen. Las diferencias de unicidad Unicode pueden requerir corregir datos duplicados antes de importar. Para volver al sistema anterior conserva el archivo original y la versión anterior del código.
+
+Los respaldos administrativos ahora son archivos `.dump`, restaurables con `pg_restore --dbname <destino_vacio> --no-owner --no-acl <archivo.dump>`. Los uploads y las credenciales necesitan respaldo por separado. En Vercel aún falta adaptar los archivos y tareas periódicas a servicios persistentes; esta migración no realiza un despliegue.
+
+### Pruebas con PostgreSQL
+
+Configura `TEST_DATABASE_URL` con una base dedicada a pruebas. Cada fixture crea y elimina su propio esquema, sin truncar tablas de otros esquemas. En PowerShell:
+
+```powershell
+$env:TEST_DATABASE_URL='postgresql://postgres:postgres@localhost:5432/emprendebuho_test'
+npm test
+```
 
 ### Cuentas locales de demostración
 
@@ -160,10 +179,10 @@ Los siguientes comandos se ejecutan desde la raíz y corresponden a scripts exis
 | --- | --- |
 | `npm run dev` | Inicia ambos servicios en desarrollo. |
 | `npm test` | Ejecuta todas las pruebas del backend y las pruebas de integración del cliente y configuración de lint del frontend. |
-| `npm run test:e2e` | Ejecuta los recorridos de los tres roles en Chromium sin ventana, con SQLite y archivos temporales. |
+| `npm run test:e2e` | Ejecuta los recorridos de los tres roles en Chromium sin ventana, con esquemas PostgreSQL y archivos temporales. |
 | `npm run build` | Compila el frontend con Vite en `frontend/dist/`. |
 | `npm run lint` | Ejecuta ESLint sobre `frontend/src`, incluidos archivos JSX. |
-| `npm run db:reset` | Recrea SQLite y carga las semillas; elimina datos y archivos locales. |
+| `npm run db:reset` | Reinicia PostgreSQL en desarrollo con `--confirm-reset`; conserva archivos. |
 | `npm run preview -w frontend` | Inicia la vista previa del bundle ya compilado; consulta la URL que imprime Vite. |
 
 También puedes ejecutar `npm test` desde `backend/` o `frontend/`, y `npm run build` desde `frontend/`. Las pruebas usan el helper de bases temporales en `backend/tests/helpers/testApp.js`; no necesitan restablecer tu base de datos local.
@@ -174,7 +193,7 @@ La suite E2E detecta Edge o Chrome en las rutas habituales de Windows y Chromium
 npm run test:e2e -w frontend -- --browser "C:/ruta/al/navegador.exe"
 ```
 
-La suite inicia sus propios servicios en puertos disponibles, carga semillas en SQLite temporal y cierra los servicios al terminar. Las capturas y la descarga de prueba quedan en la carpeta temporal que imprime. Las operaciones administrativas de estas pruebas afectan únicamente esos datos de demostración.
+La suite inicia sus propios servicios en puertos disponibles, carga semillas en un esquema PostgreSQL temporal y cierra los servicios al terminar. Las capturas y la descarga de prueba quedan en la carpeta temporal que imprime. Las operaciones administrativas de estas pruebas afectan únicamente esos datos de demostración.
 
 La compilación genera los archivos del frontend; no inicia el backend. El servidor Express actual no publica automáticamente `frontend/dist/`. La vista previa de Vite tampoco sustituye una configuración de despliegue de ambos servicios.
 
@@ -257,8 +276,8 @@ Las dependencias, los bundles, los archivos `.env`, las bases locales, los respa
 | Puerto ocupado / `EADDRINUSE` | Detén la instancia anterior con `Ctrl+C`. Si Vite elige otro puerto, libera el 5173 y reinicia para mantener el origen CORS predeterminado. |
 | Error CORS | Abre `http://localhost:5173` y comprueba `CORS_ORIGIN`. `127.0.0.1`, otro puerto o HTTPS constituyen un origen distinto. Reinicia el backend después de cambiar su `.env`. |
 | Error de proxy o API inaccesible | Comprueba que el backend siga ejecutándose y abre `/api/health` en el puerto 4000. Revisa que el proxy coincida con el puerto real del backend. |
-| Base bloqueada, sin permisos o reset fallido | Detén el backend y cualquier herramienta que mantenga abierta SQLite. Comprueba permisos y rutas antes de repetir un reset, que elimina datos. |
-| Un contacto de un carácter falla en una base antigua | Consulta la migración de la sección 7 de `docs/especificacion-base-de-datos.md`. Inicializar el servidor no modifica un `CHECK` de una tabla existente. No restablezcas una base con datos que necesites conservar. |
+| Conexión PostgreSQL fallida | Revisa DATABASE_URL, disponibilidad del servidor, TLS y permisos del usuario. |
+| Error al importar datos anteriores | Revisa integridad del origen y unicidad de los datos; el destino debe estar vacío. |
 | Una cuenta de semillas no puede operar | Comprueba su rol y estado. Las cuentas pendientes o rechazadas no tienen los permisos de una cuenta aprobada. |
 | Las pruebas E2E no encuentran navegador | Instala un navegador Chromium compatible o proporciona la ruta del que ya tengas mediante `--browser`. |
 | ESLint no encuentra su configuración | Ejecuta `npm run lint` desde la raíz o desde `frontend/`; la configuración está en `frontend/eslint.config.js`. |
@@ -268,6 +287,7 @@ La auditoría de instalación detectó tres alertas altas en la cadena de desarr
 ## Documentación de referencia
 
 - [Reglas operativas](AGENTS.md).
+- [PostgreSQL y pendientes para desplegar en Vercel](docs/despliegue-vercel.md).
 - [Especificación técnica maestra](especificacion_tecnica_emprendebuho.md).
 - [Plan de construcción y alcance por fase](docs/plan-de-construccion.md).
 - [Arquitectura](docs/especificacion-arquitectura.md).

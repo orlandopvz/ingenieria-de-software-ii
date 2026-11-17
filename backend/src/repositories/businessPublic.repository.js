@@ -16,35 +16,35 @@ export const businessJoins = `FROM businesses b JOIN users u ON u.id = b.user_id
   JOIN categories c ON c.id = b.category_id LEFT JOIN campus_zones z ON z.id = b.campus_zone_id`;
 export const visibleBusiness = "u.estado_cuenta = 'aprobada' AND u.rol = 'emprendedor' AND b.inactivo_oculto = 0";
 const filters = String.raw`WHERE ${visibleBusiness}
-  AND (:ids_json IS NULL OR b.id IN (SELECT value FROM json_each(:ids_json)))
-  AND (:q_like IS NULL OR normalizar(b.nombre_negocio) LIKE :q_like ESCAPE '\'
+  AND (CAST(:ids_json AS text) IS NULL OR b.id IN (SELECT value::integer FROM json_array_elements_text(CAST(:ids_json AS json))))
+  AND (CAST(:q_like AS text) IS NULL OR normalizar(b.nombre_negocio) LIKE :q_like ESCAPE '\'
     OR normalizar(b.descripcion) LIKE :q_like ESCAPE '\'
     OR EXISTS (SELECT 1 FROM products p WHERE p.business_id = b.id AND p.estado = 'activo' AND normalizar(p.nombre) LIKE :q_like ESCAPE '\'))
-  AND (:category_id IS NULL OR b.category_id = :category_id)
-  AND (:zone_id IS NULL OR (b.mostrar_ubicacion = 1 AND b.campus_zone_id = :zone_id))
-  AND (:open_now IS NULL OR b.esta_abierto = :open_now)
-  AND ((:min_price IS NULL AND :max_price IS NULL) OR EXISTS (
+  AND (CAST(:category_id AS integer) IS NULL OR b.category_id = :category_id)
+  AND (CAST(:zone_id AS integer) IS NULL OR (b.mostrar_ubicacion = 1 AND b.campus_zone_id = :zone_id))
+  AND (CAST(:open_now AS integer) IS NULL OR b.esta_abierto = :open_now)
+  AND ((CAST(:min_price AS numeric) IS NULL AND CAST(:max_price AS numeric) IS NULL) OR EXISTS (
     SELECT 1 FROM products p WHERE p.business_id = b.id AND p.estado = 'activo'
       AND p.precio >= COALESCE(:min_price, 0) AND p.precio <= COALESCE(:max_price, 99999.99)))
-  AND (:day_of_week IS NULL OR EXISTS (SELECT 1 FROM business_schedules s
+  AND (CAST(:day_of_week AS integer) IS NULL OR EXISTS (SELECT 1 FROM business_schedules s
     WHERE s.business_id = b.id AND s.dia_semana = :day_of_week AND s.cerrado_todo_el_dia = 0
       AND s.hora_apertura <= :time AND :time < s.hora_cierre))`;
 export const SORT_CLAUSES = Object.freeze({
   open_now: 'b.esta_abierto DESC, en_horario_ahora DESC, normalizar(b.nombre_negocio) ASC, b.id ASC',
   alpha_asc: 'normalizar(b.nombre_negocio) ASC, b.id ASC', alpha_desc: 'normalizar(b.nombre_negocio) DESC, b.id ASC',
-  proximity: 'CASE WHEN _mapa_x IS NULL THEN 1 ELSE 0 END ASC, ((_mapa_x - :px)*(_mapa_x - :px) + (_mapa_y - :py)*(_mapa_y - :py)) ASC, b.esta_abierto DESC, normalizar(b.nombre_negocio) ASC, b.id ASC'
+  proximity: 'CASE WHEN b.mostrar_ubicacion = 0 OR z.mapa_x IS NULL THEN 1 ELSE 0 END ASC, ((z.mapa_x - :px)*(z.mapa_x - :px) + (z.mapa_y - :py)*(z.mapa_y - :py)) ASC, b.esta_abierto DESC, normalizar(b.nombre_negocio) ASC, b.id ASC'
 });
 export function createBusinessPublicRepository(db) {
   return {
-    list(params, sort) {
+    async list(params, sort) {
       const order = Object.hasOwn(SORT_CLAUSES, sort) ? SORT_CLAUSES[sort] : SORT_CLAUSES.open_now;
-      const items = db.prepare(`${businessSelect} ${businessJoins} ${filters} ORDER BY ${order} LIMIT :limit OFFSET :offset`).all(params);
-      const total = db.prepare(`SELECT COUNT(*) AS total ${businessJoins} ${filters}`).get(params).total;
+      const items = await db.prepare(`${businessSelect} ${businessJoins} ${filters} ORDER BY ${order} LIMIT :limit OFFSET :offset`).all(params);
+      const total = (await db.prepare(`SELECT COUNT(*) AS total ${businessJoins} ${filters}`).get(params)).total;
       return { items, total };
     },
-    detail: params => db.prepare(`${businessSelect} ${businessJoins} WHERE ${visibleBusiness} AND b.slug = :slug`).get(params),
-    schedules: id => db.prepare('SELECT dia_semana, hora_apertura, hora_cierre, cerrado_todo_el_dia FROM business_schedules WHERE business_id = :id ORDER BY dia_semana').all({ id }),
-    contacts: id => db.prepare('SELECT id, tipo_contacto, valor, etiqueta, es_principal, orden FROM business_contacts WHERE business_id = :id ORDER BY es_principal DESC, orden ASC, id ASC').all({ id }),
-    products: id => db.prepare("SELECT id, nombre, descripcion, precio, imagen_url, estado FROM products WHERE business_id = :id AND estado IN ('activo', 'pausado') ORDER BY CASE WHEN estado = 'activo' THEN 0 ELSE 1 END, normalizar(nombre), id").all({ id })
+    detail: async params => (await db.prepare(`${businessSelect} ${businessJoins} WHERE ${visibleBusiness} AND b.slug = :slug`).get(params)),
+    schedules: async id => (await db.prepare('SELECT dia_semana, hora_apertura, hora_cierre, cerrado_todo_el_dia FROM business_schedules WHERE business_id = :id ORDER BY dia_semana').all({ id })),
+    contacts: async id => (await db.prepare('SELECT id, tipo_contacto, valor, etiqueta, es_principal, orden FROM business_contacts WHERE business_id = :id ORDER BY es_principal DESC, orden ASC, id ASC').all({ id })),
+    products: async id => (await db.prepare("SELECT id, nombre, descripcion, precio, imagen_url, estado FROM products WHERE business_id = :id AND estado IN ('activo', 'pausado') ORDER BY CASE WHEN estado = 'activo' THEN 0 ELSE 1 END, normalizar(nombre), id").all({ id }))
   };
 }

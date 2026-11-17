@@ -1,25 +1,27 @@
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { env } from './config/env.js';
-import { getDb, closeDb } from './config/db.js';
+import { getDb, closeDb, createStorageDirectories } from './config/db.js';
 import { createApp } from './app.js';
 import { createMaintenanceService } from './services/maintenance.service.js';
 
-export function startServer(config = env) {
+export async function startServer(config = env) {
   if (config !== env) throw new Error('El servidor debe usar la configuración validada del entorno.');
   const db = getDb();
+  await db.query('SELECT 1');
+  createStorageDirectories(config);
   let maintenanceTimer;
   if (config.NODE_ENV !== 'test') {
     const maintenance = createMaintenanceService(db, config);
-    const run = () => {
-      try { maintenance.runInactivityCheck(); }
+    const run = async () => {
+      try { await maintenance.runInactivityCheck(); }
       catch (error) { console.error('No se pudo completar el mantenimiento programado.', error); }
     };
-    run();
+    await run();
     maintenanceTimer = setInterval(run, config.MAINTENANCE_INTERVAL_HOURS * 3600000);
     maintenanceTimer.unref();
   }
-  const server = createApp({ config }).listen(config.PORT, () => {
+  const server = createApp({ db, config }).listen(config.PORT, () => {
     console.log(`EmprendeBúho disponible en http://localhost:${config.PORT}`);
   });
   const stop = () => server.close(() => { closeDb(); });
@@ -41,8 +43,9 @@ export function startServer(config = env) {
 }
 
 if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) {
-  try { startServer(); }
+  try { await startServer(); }
   catch (error) {
+    await closeDb();
     console.error('No se pudo iniciar EmprendeBúho. Revisa la configuración del backend.', error);
     process.exitCode = 1;
   }

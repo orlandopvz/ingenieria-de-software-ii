@@ -14,7 +14,9 @@ const schema = z.object({
   CORS_ORIGIN: z.url(),
   JWT_SECRET: z.string().min(32),
   JWT_EXPIRES_IN: z.string().regex(/^\d+[smhd]$/),
-  DB_PATH: z.string().min(1),
+  DATABASE_URL: z.string().regex(/^postgres(?:ql)?:\/\//).default('postgresql://postgres:postgres@localhost:5432/emprendebuho'),
+  DB_POOL_MAX: positiveInteger.max(20).default(5),
+  DB_SCHEMA: z.string().regex(/^test_[a-f0-9]{32}$/).optional(),
   UPLOAD_DIR: z.string().min(1),
   STORAGE_DIR: z.string().min(1),
   BACKUP_DIR: z.string().min(1),
@@ -33,8 +35,8 @@ export function loadEnv(source = process.env) {
     throw new Error(`Configuración inválida. Revisa estas variables en backend/.env: ${fields.join(', ')}.`);
   }
   const config = result.data;
-  for (const key of ['DB_PATH', 'UPLOAD_DIR', 'STORAGE_DIR', 'BACKUP_DIR']) {
-    if (key !== 'DB_PATH' || config[key] !== ':memory:') config[key] = path.resolve(backendRoot, config[key]);
+  for (const key of ['UPLOAD_DIR', 'STORAGE_DIR', 'BACKUP_DIR']) {
+    config[key] = path.resolve(backendRoot, config[key]);
   }
   const uploads = config.UPLOAD_DIR;
   const privatePath = config.STORAGE_DIR;
@@ -43,7 +45,7 @@ export function loadEnv(source = process.env) {
     return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative));
   };
   if (overlaps(uploads, privatePath) || overlaps(privatePath, uploads)
-    || overlaps(uploads, config.BACKUP_DIR) || overlaps(uploads, config.DB_PATH)) {
+    || overlaps(uploads, config.BACKUP_DIR)) {
     throw new Error('Configuración inválida. Separa las imágenes públicas de las credenciales, respaldos y base de datos.');
   }
   return Object.freeze(config);

@@ -94,3 +94,14 @@ Las bases existentes requieren reconstruir únicamente `business_contacts` en un
 Se sustituye el mapa de círculos por las 8 zonas fijas (9 polígonos) de `docs/mapa-campus-zonas.md`, basado en la lámina Campus Hermosillo 2026. Las formas y etiquetas exactas viven en el frontend indexadas por `codigo`; Biblioteca Central y Museo comparten selección en sus dos piezas. La lista accesible conserva las zonas sin geometría y ofrece una alternativa táctil en móvil.
 
 Se actualizan descripciones y coordenadas porcentuales del seed; Enfermería corresponde a Sociales. `mapa_x`/`mapa_y` conservan su uso para cercanía y aproximan la etiqueta principal. No cambian el esquema ni los endpoints. El seed solo se aplica a bases vacías: las pruebas usan una base temporal; para regenerar datos de demostración se puede ejecutar `npm run db:reset`, que elimina los datos locales existentes.
+# ADR — Migración de SQLite a PostgreSQL
+
+Fecha: 2026-11-16. Estado: aceptada por solicitud del propietario.
+
+Se sustituye SQLite local por PostgreSQL 16+ para permitir una base persistente externa al proceso del backend. Se autoriza `pg` (node-postgres), sin ORM. `better-sqlite3` se conserva solo como dependencia de desarrollo de la herramienta de importación de datos anteriores. Esta decisión prevalece sobre referencias históricas a SQLite en ADR anteriores.
+
+La API permanece compatible. Se adapta la cadena repositorio/servicio/controlador a async/await; AsyncLocalStorage mantiene una conexión por transacción y savepoints para anidamiento. Un bloqueo asesor transaccional serializa las mutaciones mientras se conservan las comprobaciones de negocio existentes. Se mantienen las restricciones, privacidad, auditoría y notificaciones atómicas. No se inicializan tablas ni cuentas demo automáticamente en producción. Los respaldos pasan a pg_dump/pg_restore; no se simula una copia de archivo de base de datos.
+
+Se entrega importación transaccional de las 11 tablas, IDs y secuencias con destino vacío y origen de solo lectura. Pruebas de integración con PostgreSQL real en esquemas aislados. La migración no despliega servicios ni transfiere información a una cuenta remota sin configuración explícita. Los archivos subidos y las credenciales siguen necesitando almacenamiento persistente independiente para un despliegue serverless.
+
+Referencias: https://node-postgres.com/features/transactions y https://www.postgresql.org/docs/current/app-pgdump.html.

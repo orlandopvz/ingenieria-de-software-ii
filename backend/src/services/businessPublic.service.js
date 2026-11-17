@@ -23,22 +23,22 @@ export function createBusinessPublicService(db, clock = nowInHermosillo) {
   const repository = createBusinessPublicRepository(db);
   const catalogs = createCatalogRepository(db);
   return {
-    list(query) {
+    async list(query) {
       const params = publicQueryParams(query, clock());
       let sort = query.sort;
       if (sort === 'proximity') {
-        const zone = query.preferred_zone_id && catalogs.zone(query.preferred_zone_id);
+        const zone = query.preferred_zone_id && (await catalogs.zone(query.preferred_zone_id));
         if (zone && zone.mapa_x !== null && zone.mapa_y !== null) { params.px = zone.mapa_x; params.py = zone.mapa_y; }
         else sort = 'open_now';
       }
-      const result = repository.list(params, sort);
+      const result = await repository.list(params, sort);
       return { items: result.items.map(sanitizePublicBusiness), meta: pagination(query, result.total) };
     },
-    detail(slug) {
+    async detail(slug) {
       const now = clock();
-      const row = repository.detail({ slug, now_dow: now.dow, now_time: now.time });
+      const row = await repository.detail({ slug, now_dow: now.dow, now_time: now.time });
       if (!row) throw new AppError(404, 'NOT_FOUND');
-      return sanitizePublicBusiness({ ...row, schedules: repository.schedules(row.id), contacts: repository.contacts(row.id), products: repository.products(row.id) });
+      return sanitizePublicBusiness({ ...row, schedules: await repository.schedules(row.id), contacts: await repository.contacts(row.id), products: await repository.products(row.id) });
     }
   };
 }

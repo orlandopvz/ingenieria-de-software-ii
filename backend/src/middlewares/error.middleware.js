@@ -19,9 +19,9 @@ export function errorHandler(error, req, res, next) {
     details = error.issues.map(issue => ({ field: issue.path.join('.'), message: 'Revisa el valor de este campo.' }));
   } else if (error instanceof multer.MulterError) {
     code = 'INVALID_FILE';
-  } else if (error?.code === 'SQLITE_CONSTRAINT_UNIQUE' || error?.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
+  } else if (error?.code === '23505') {
     code = 'CONFLICT';
-  } else if (['SQLITE_CONSTRAINT_FOREIGNKEY', 'SQLITE_CONSTRAINT_CHECK', 'SQLITE_CONSTRAINT_NOTNULL'].includes(error?.code)
+  } else if (['23503', '23514', '23502', '22P02'].includes(error?.code)
     || ['entity.parse.failed', 'entity.too.large'].includes(error?.type)) {
     code = 'VALIDATION_ERROR';
   }

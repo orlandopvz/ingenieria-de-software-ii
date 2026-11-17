@@ -1,2 +1,2 @@
 import { ok } from '../utils/response.js';
-export const createCatalogController = service => ({ list: (req, res) => ok(res, service.list()) });
+export const createCatalogController = service => ({ list: async (req, res) => ok(res, (await service.list())) });

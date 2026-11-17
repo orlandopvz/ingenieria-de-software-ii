@@ -247,3 +247,15 @@ Eres responsable de implementar la [NOMBRE DE LA FASE] del proyecto EmprendeBúh
 4. Verificación antes de terminar:
    - Ejecuta los comandos de verificación de tu fase, corrige cualquier fallo y reporta el resultado exacto.
 ```
+
+## Fase 5 — Migración a PostgreSQL (F5)
+
+Ámbito: esquema, semillas, configuración, repositorios, servicios, controladores, autenticación, mantenimiento, pruebas backend/frontend, etiquetas de respaldos, manifiestos y documentación. Trabajo secuencial de un agente. Las fases anteriores describen el historial SQLite y no reemplazan el contrato actualizado.
+
+- [x] Esquema PostgreSQL con restricciones y búsqueda sin acentos.
+- [x] Consultas asíncronas, transacciones, rollback, notificaciones y auditoría atómicas.
+- [x] Importación de las 11 tablas desde SQLite conservando origen, IDs y secuencias.
+- [x] Respaldos pg_dump y validación con pg_restore.
+- [x] npm test y npm run build satisfactorios.
+
+Commit: `feat(backend): migrar persistencia a PostgreSQL (F5)`.
