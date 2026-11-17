@@ -1,5 +1,15 @@
 # Bitácora de Decisiones Técnicas (ADR) — EmprendeBúho (v1.0 → v2.0)
 
+## F6 — Configuración de Vercel Services
+
+2026-11-16. Se prepara `vercel.json` con dos servicios del monorepo: Express y SPA Vite. La API conserva `/api`, las imágenes `/uploads` y el frontend el resto de rutas con fallback para React Router. La entrada Express para Vercel exporta la instancia y evita efectos de arranque propios de un proceso residente. No se agregan dependencias.
+
+No se añaden bindings porque las llamadas actuales se ejecutan en el navegador, no entre funciones de los servicios. Las URLs de bindings no existen durante el build de Vite ni son accesibles desde el navegador. El proxy localhost de Vite se conserva exclusivamente para `npm run dev`; el cliente de producción usa `/api` en el dominio compartido.
+
+Se difiere la creación de directorios hasta recibir una subida. En Vercel se bloquean subidas y respaldos locales con CONFLICT para evitar tanto errores al importar en un sistema de archivos de solo lectura como pérdida de credenciales en `/tmp`. Se documenta la selección pendiente de almacenamiento persistente. No se ejecuta el planificador local en funciones Vercel. Se validan automáticamente los dominios de despliegue confiables para CORS. La propuesta de nombres y rutas se somete a confirmación antes del push.
+
+Referencias: https://vercel.com/docs/services, https://vercel.com/docs/services/bindings y https://vercel.com/docs/frameworks/backend/express.
+
 Este documento registra todas las decisiones técnicas tomadas durante la revisión de `especificacion_tecnica_emprendebuho.md` para pasar de la versión 1.0 a la versión 2.0.
 
 > **Principio rector:** La especificación del **producto** (§1 Contexto y alcance, §3.1 Requerimientos Funcionales, §3.2 Requerimientos No Funcionales y las columnas de producto de §3.3) se mantuvo **intacta**. Todos los cambios aquí documentados resuelven contradicciones internas, errores de SQL/seguridad o huecos de contrato técnico para que los agentes construyan sin ambigüedad.

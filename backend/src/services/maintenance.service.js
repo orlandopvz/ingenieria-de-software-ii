@@ -54,6 +54,7 @@ export function createMaintenanceService(db, config) {
         archivos_uploads: filesWithin(config.UPLOAD_DIR).length, backups: backups() };
     },
     async backup(actor) {
+      if (config.VERCEL) throw new AppError(409, 'CONFLICT', 'La creación de respaldos no está disponible en este momento.');
       if (backupRunning) throw new AppError(409, 'CONFLICT', 'Ya hay un respaldo en proceso.');
       backupRunning = true;
       let target;

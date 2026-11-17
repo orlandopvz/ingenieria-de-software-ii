@@ -259,3 +259,15 @@ Eres responsable de implementar la [NOMBRE DE LA FASE] del proyecto EmprendeBúh
 - [x] npm test y npm run build satisfactorios.
 
 Commit: `feat(backend): migrar persistencia a PostgreSQL (F5)`.
+
+## Fase 6 — Configuración de Vercel Services (F6)
+
+Ámbito: `vercel.json`, entrada Express, configuración de entorno/subidas y respaldo, pruebas de runtime, documentación técnica y guía de despliegue. Trabajo secuencial. No incluye elegir proveedor de archivos, desplegar ni publicar antes de la confirmación solicitada.
+
+- [x] Servicios y rutas revisados contra el código y el esquema oficial de Vercel.
+- [x] Entrada Express sin escritura en disco, puerto ni planificador durante importación.
+- [x] Cliente SPA usa rutas públicas; bindings evaluados según llamadas reales.
+- [x] Pruebas backend, build frontend y limitaciones de vercel dev documentadas.
+- [x] Confirmación del propietario sobre nombres, rutas y bindings (2026-11-16).
+
+Commit: `feat(deploy): configurar Vercel Services (F6)`.

@@ -36,3 +36,4 @@ Thumbs.db
 .idea/
 .npm-cache/
 .tmp-postgres/
+.vercel/

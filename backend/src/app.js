@@ -11,7 +11,7 @@ export function createApp({ db, config = env, configure } = {}) {
   app.disable('x-powered-by');
   app.use(helmet());
   app.use(cors({ origin(origin, done) {
-    if (!origin || origin === config.CORS_ORIGIN) done(null, true);
+    if (!origin || (config.CORS_ORIGINS ?? [config.CORS_ORIGIN]).includes(origin)) done(null, true);
     else done(new AppError(403, 'FORBIDDEN', 'El origen de esta solicitud no está permitido.'));
   } }));
   app.use(express.json({ limit: '1mb' }));

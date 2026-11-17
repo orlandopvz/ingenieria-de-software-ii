@@ -66,6 +66,16 @@ Adicionalmente, ante los lineamientos institucionales de la Universidad de Sonor
 
 ## 2. Arquitectura Técnica y Estructura del Proyecto Local
 
+### Despliegue en Vercel Services (F6)
+
+`vercel.json` declara `backend` (Express, raíz `backend`, entrada `src/index.js`) y `frontend` (Vite, raíz `frontend`). `/api` y `/uploads`, incluidos sus descendientes, se envían al backend conservando el prefijo; el resto al frontend, con fallback de SPA a `index.html`. Las credenciales solo se entregan por el endpoint administrativo autenticado.
+
+El navegador consume `/api` en el mismo dominio. No hay llamadas servidor a servidor entre los dos servicios y no se declaran bindings. Una futura función que llame a otro servicio deberá declarar el binding en el llamador y consumir su URL únicamente en ejecución; nunca se entrega una URL interna al bundle Vite ni se usa en builds o middleware.
+
+La entrada Vercel exporta una instancia Express sin abrir puerto, crear carpetas, consultar PostgreSQL, sembrar datos ni iniciar intervalos al importar. Se conserva `src/server.js` para el servidor local. Los directorios de subidas se crean al recibir archivos. En Vercel no se habilitan subidas ni respaldos locales: responden CONFLICT (409) hasta implementar almacenamiento persistente, sin guardar credenciales efímeras. Los dominios confiables inyectados por Vercel se aceptan junto con `CORS_ORIGIN`. Las variables no secretas tienen valores predeterminados; `JWT_SECRET`, `REPORT_IP_SALT` y una `DATABASE_URL` explícita son obligatorias en producción. El desarrollo integrado usa `vercel dev`.
+
+Esta configuración no incluye un proveedor de archivos ni un cron. Esas limitaciones se detallan en `docs/despliegue-vercel.md`. Nombres, visibilidad y ausencia de bindings requieren confirmación del propietario antes de publicar la configuración.
+
 ### 2.1 Decisiones Arquitectónicas del Stack (React + Express + PostgreSQL)
 
 El sistema se construye y ejecuta 100 % en local, sin servicios externos ni de pago. Son dos aplicaciones dentro de un monorepo (npm workspaces) que se comunican por una API REST JSON sobre HTTP.
