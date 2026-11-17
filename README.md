@@ -288,6 +288,7 @@ La auditoría de instalación detectó tres alertas altas en la cadena de desarr
 
 - [Reglas operativas](AGENTS.md).
 - [PostgreSQL y pendientes para desplegar en Vercel](docs/despliegue-vercel.md).
+- [Configuración Neon, autenticación y prueba del servicio real](docs/configuracion-neon.md).
 - [Especificación técnica maestra](especificacion_tecnica_emprendebuho.md).
 - [Plan de construcción y alcance por fase](docs/plan-de-construccion.md).
 - [Arquitectura](docs/especificacion-arquitectura.md).

@@ -14,9 +14,12 @@
     "db:reset": "npm run db:reset -w backend --",
     "db:init": "npm run db:init -w backend --",
     "db:seed": "npm run db:seed -w backend --",
-    "db:migrate:sqlite": "npm run db:migrate:sqlite -w backend --"
+    "db:migrate:sqlite": "npm run db:migrate:sqlite -w backend --",
+    "verify:neon": "node scripts/verifyNeon.mjs"
   },
   "devDependencies": {
+    "@neon/config": "^1.14.1",
+    "@neon/env": "^2.1.4",
     "concurrently": "^9.0.0"
   }
 }

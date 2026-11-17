@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import pg from 'pg';
+import { attachDatabasePool } from '@vercel/functions';
 import { env } from './env.js';
 // Conserva números y fechas UTC en las respuestas JSON.
 pg.types.setTypeParser(20, value => {
@@ -24,10 +25,12 @@ export function compileNamed(sql, params = {}) {
   return { text, values: names.map(name => params[name]) };
 }
 
-export function createDatabase(config = env) {
+export function createDatabase(config = env, { direct = false } = {}) {
   if (config.DB_SCHEMA && !/^test_[a-f0-9]{32}$/.test(config.DB_SCHEMA)) throw new Error('El esquema de pruebas no es válido.');
-  const pool = new pg.Pool({ connectionString: config.DATABASE_URL, max: config.DB_POOL_MAX ?? 5,
+  const pool = new pg.Pool({ connectionString: direct ? (config.DATABASE_URL_UNPOOLED ?? config.DATABASE_URL) : config.DATABASE_URL,
+    max: config.DB_POOL_MAX ?? 5, idleTimeoutMillis: 5000,
     connectionTimeoutMillis: 10000, options: `-c timezone=UTC${config.DB_SCHEMA ? ` -c search_path=${config.DB_SCHEMA}` : ''}` });
+  if (config.VERCEL) attachDatabasePool(pool);
   pool.on('error', () => console.error('Se perdió una conexión inactiva con PostgreSQL.'));
   const context = new AsyncLocalStorage();
   let savepoint = 0;

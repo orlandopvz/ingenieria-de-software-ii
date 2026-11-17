@@ -4,7 +4,13 @@ import dotenv from 'dotenv';
 import { z } from 'zod';
 
 export const backendRoot = fileURLToPath(new URL('../../', import.meta.url));
-dotenv.config({ path: path.join(backendRoot, '.env'), quiet: true });
+export function loadEnvironmentFiles(source = process.env, root = backendRoot) {
+  return dotenv.config({
+    path: [path.resolve(root, '../.env.local'), path.resolve(root, '../.env'), path.join(root, '.env')],
+    processEnv: source, override: false, quiet: true
+  });
+}
+loadEnvironmentFiles();
 z.config(z.locales.es());
 
 const positiveInteger = z.coerce.number().int().positive();
@@ -16,6 +22,7 @@ const schema = z.object({
   JWT_SECRET: z.string().min(32),
   JWT_EXPIRES_IN: z.string().regex(/^\d+[smhd]$/).default('7d'),
   DATABASE_URL: z.string().regex(/^postgres(?:ql)?:\/\//).default('postgresql://postgres:postgres@localhost:5432/emprendebuho'),
+  DATABASE_URL_UNPOOLED: z.string().regex(/^postgres(?:ql)?:\/\//).optional(),
   DB_POOL_MAX: positiveInteger.max(20).default(5),
   DB_SCHEMA: z.string().regex(/^test_[a-f0-9]{32}$/).optional(),
   UPLOAD_DIR: z.string().min(1).default('./uploads'),

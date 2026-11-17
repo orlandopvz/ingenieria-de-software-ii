@@ -3,6 +3,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import Database from 'better-sqlite3';
 import { createDatabase, initializeSchema } from '../src/config/db.js';
+import { env } from '../src/config/env.js';
 import { createMigrationRepository } from '../src/repositories/migration.repository.js';
 import { databaseTables } from '../src/repositories/admin.repository.js';
 
@@ -33,7 +34,7 @@ export async function importSqlite(db, source) {
 }
 
 if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) {
-  const db = createDatabase();
+  const db = createDatabase(env, { direct: true });
   try {
     const source = process.argv[process.argv.indexOf('--source') + 1];
     if (!process.argv.includes('--source')) throw new Error('Falta --source.');

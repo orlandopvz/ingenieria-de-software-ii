@@ -12,7 +12,8 @@ import { createApp } from '../../src/app.js';
 export async function createTestApp({ seed = true, configure } = {}) {
   if (!process.env.TEST_DATABASE_URL) throw new Error('Configura TEST_DATABASE_URL con una base PostgreSQL de pruebas.');
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'emprendebuho-test-'));
-  const config = { ...env, NODE_ENV: 'test', DATABASE_URL: process.env.TEST_DATABASE_URL, DB_SCHEMA: 'test_' + randomUUID().replaceAll('-', ''),
+  const config = { ...env, NODE_ENV: 'test', VERCEL: false, DATABASE_URL: process.env.TEST_DATABASE_URL,
+    DATABASE_URL_UNPOOLED: process.env.TEST_DATABASE_URL, DB_SCHEMA: 'test_' + randomUUID().replaceAll('-', ''),
     UPLOAD_DIR: path.join(directory, 'uploads'), STORAGE_DIR: path.join(directory, 'storage'), BACKUP_DIR: path.join(directory, 'backups') };
   let db;
   const control = createDatabase({ ...config, DB_SCHEMA: undefined });

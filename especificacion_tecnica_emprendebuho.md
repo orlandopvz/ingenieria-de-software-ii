@@ -76,6 +76,14 @@ La entrada Vercel exporta una instancia Express sin abrir puerto, crear carpetas
 
 Esta configuración no incluye un proveedor de archivos ni un cron. Esas limitaciones se detallan en `docs/despliegue-vercel.md`. Nombres, visibilidad y ausencia de bindings requieren confirmación del propietario antes de publicar la configuración.
 
+### Conexión administrada con Neon (F7)
+
+Se autoriza la configuración de infraestructura `neon.ts` solicitada por el propietario, como excepción a la prohibición de TypeScript exclusivamente para este archivo declarativo; la aplicación sigue en JavaScript. Neon CLI inicializa el enlace local `.neon` (ignorado por Git) al proyecto y la rama indicados. Solo se usa PostgreSQL: se conserva Express, `pg`, el esquema, las transacciones y la autenticación existentes. `@neon/config` y `@neon/env` se autorizan como herramientas de desarrollo del flujo CLI; `@vercel/functions` se autoriza en backend para asociar el pool con el ciclo de vida de Fluid compute.
+
+El entorno del proceso tiene prioridad sobre archivos. Después se cargan `.env.local` y `.env` de raíz (variables descargadas por Neon) y finalmente `backend/.env` como respaldo para los secretos de la aplicación y desarrollo local, sin sobreescribir valores previos. Las URLs nunca llegan al navegador ni se versionan. La API usa `DATABASE_URL` con pool; inicialización del esquema, importaciones y respaldos usan `DATABASE_URL_UNPOOLED` si está definida, con respaldo a `DATABASE_URL` para instalaciones PostgreSQL tradicionales. No se cambia de driver ni se añade ORM.
+
+La verificación del servicio usa conexiones reales y solicitudes HTTP a la aplicación. Las pruebas de escritura, datos demo e integración se ejecutan en un esquema aislado que se retira al terminar; no reinician ni siembran cuentas demo en la rama production. La instalación del DDL se realiza mediante el comando versionado `db:init`, tras comprobar el estado del destino.
+
 ### 2.1 Decisiones Arquitectónicas del Stack (React + Express + PostgreSQL)
 
 El sistema se construye y ejecuta 100 % en local, sin servicios externos ni de pago. Son dos aplicaciones dentro de un monorepo (npm workspaces) que se comunican por una API REST JSON sobre HTTP.

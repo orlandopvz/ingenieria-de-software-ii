@@ -68,7 +68,7 @@ export function createMaintenanceService(db, config) {
         target = safePath(config.BACKUP_DIR, filename);
         if (fs.existsSync(target)) throw new AppError(409, 'CONFLICT', 'Ya existe un respaldo de este segundo. Inténtalo de nuevo.');
         temporary = safePath(config.BACKUP_DIR, `.respaldo-${randomUUID()}.dump`);
-        const args = ['--dbname', config.DATABASE_URL, '--format=custom', '--no-owner', '--no-acl', '--file', temporary];
+        const args = ['--dbname', config.DATABASE_URL_UNPOOLED ?? config.DATABASE_URL, '--format=custom', '--no-owner', '--no-acl', '--file', temporary];
         if (config.DB_SCHEMA) args.push('--schema', config.DB_SCHEMA);
         try { await runFile('pg_dump', args, { windowsHide: true }); }
         catch { throw new AppError(500, 'INTERNAL_ERROR', 'No se pudo generar el respaldo.'); }

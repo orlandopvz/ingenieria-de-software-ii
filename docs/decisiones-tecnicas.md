@@ -1,5 +1,15 @@
 # Bitácora de Decisiones Técnicas (ADR) — EmprendeBúho (v1.0 → v2.0)
 
+## F7 — Conexión Neon y entorno generado por CLI
+
+2026-11-16. El propietario solicita `neon init` y `neon deploy` sobre su organización, proyecto y rama production. Se autoriza el archivo declarativo `neon.ts` y los paquetes de configuración `@neon/config` y `@neon/env` como herramientas de desarrollo; el código de aplicación sigue siendo JavaScript y SQL sin ORM. CLI creó inicialmente esos paquetes como dependencias de raíz; se clasifican como dependencias de desarrollo.
+
+Se conserva `pg` según la skill neon-postgres instalada. Se autoriza `@vercel/functions` en backend para `attachDatabasePool`, requerido por las recomendaciones actuales para Fluid compute. La API usa URL con pool, y los comandos de esquema/importación y pg_dump prefieren `DATABASE_URL_UNPOOLED`. Las variables descargadas a `.env.local`/`.env` de raíz tienen prioridad sobre el antiguo backend/.env; las variables del proceso prevalecen sobre todos esos archivos.
+
+Solo se configura PostgreSQL. La autenticación existente y las funciones de la API se conservan; no se habilitan Auth, Data API, Functions u Object Storage de Neon. Las pruebas contra el servicio remoto crean un esquema aislado y eliminan solo ese esquema y sus archivos temporales. No se reinicia la rama production ni se insertan cuentas demo en su esquema público.
+
+Referencias: skills `neon` y `neon-postgres` instaladas por Neon CLI; https://vercel.com/docs/functions/functions-api-reference/vercel-functions-package.
+
 ## F6 — Configuración de Vercel Services
 
 2026-11-16. Se prepara `vercel.json` con dos servicios del monorepo: Express y SPA Vite. La API conserva `/api`, las imágenes `/uploads` y el frontend el resto de rutas con fallback para React Router. La entrada Express para Vercel exporta la instancia y evita efectos de arranque propios de un proceso residente. No se agregan dependencias.

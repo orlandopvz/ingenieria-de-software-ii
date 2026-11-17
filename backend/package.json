@@ -17,21 +17,22 @@
     "db:migrate:sqlite": "node database/migrateSqlite.js"
   },
   "dependencies": {
-    "express": "^5.0.0",
-    "cors": "^2.8.5",
-    "helmet": "latest",
-    "dotenv": "latest",
+    "@vercel/functions": "^3.11.3",
     "bcryptjs": "latest",
+    "cors": "^2.8.5",
+    "dotenv": "latest",
+    "express": "^5.0.0",
+    "express-rate-limit": "latest",
+    "helmet": "latest",
     "jsonwebtoken": "^9.0.0",
     "multer": "latest",
-    "zod": "^4.0.0",
+    "pg": "^8.16.3",
     "slugify": "^1.6.6",
-    "express-rate-limit": "latest",
-    "pg": "^8.16.3"
+    "zod": "^4.0.0"
   },
   "devDependencies": {
+    "better-sqlite3": "^12.4.1",
     "nodemon": "latest",
-    "supertest": "latest",
-    "better-sqlite3": "^12.4.1"
+    "supertest": "latest"
   }
 }

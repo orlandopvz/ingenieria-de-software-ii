@@ -271,3 +271,15 @@ Commit: `feat(backend): migrar persistencia a PostgreSQL (F5)`.
 - [x] Confirmación del propietario sobre nombres, rutas y bindings (2026-11-16).
 
 Commit: `feat(deploy): configurar Vercel Services (F6)`.
+
+## Fase 7 — Configuración del servicio PostgreSQL de Neon (F7)
+
+Ámbito: configuración Neon de raíz, dependencias y lockfile, carga del entorno, conexión y comandos de esquema/importación/respaldo, pruebas de entorno y servicio real, documentación. Se usa el proyecto/rama indicados por el propietario; no se aprovisionan otros servicios.
+
+- [x] CLI inicializada y neon deploy completado con autenticación del propietario.
+- [x] Lectura de variables de Neon conectada al backend sin exponer secretos (descarga pendiente de autenticación).
+- [x] Pool de API y conexión directa de administración configurados.
+- [x] Build correcto, aplicación iniciada y PostgreSQL probado por HTTP y transacciones reales.
+- [x] Pruebas y resultados documentados, sin alterar datos de producción.
+
+Commit: `feat(backend): conectar PostgreSQL de Neon (F7)`.

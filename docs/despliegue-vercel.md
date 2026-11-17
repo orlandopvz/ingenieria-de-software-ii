@@ -31,6 +31,8 @@ El proxy a `localhost:4000` en `frontend/vite.config.js` se usa únicamente en e
 
 ## Variables de entorno
 
+Si usas Neon CLI, consulta [la configuración Neon](configuracion-neon.md). `neon deploy` descarga las URLs a `.env.local` o `.env` de raíz; el backend las lee antes de `backend/.env`. Los comandos administrativos prefieren `DATABASE_URL_UNPOOLED` y la API usa `DATABASE_URL`. La descarga local no configura automáticamente las variables del proyecto Vercel.
+
 | Variable | Configuración |
 | --- | --- |
 | `DATABASE_URL` | URL PostgreSQL del proveedor; requerida explícitamente en Vercel. Respeta TLS y usa la conexión con pool para tráfico de la API. |

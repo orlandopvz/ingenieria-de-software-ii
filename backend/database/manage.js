@@ -8,7 +8,7 @@ if (!['init', 'seed', 'reset'].includes(operation)) throw new Error('Usa init, s
 if (operation === 'reset' && (env.NODE_ENV === 'production' || !process.argv.includes('--confirm-reset'))) {
   throw new Error('El reinicio solo se permite en desarrollo con --confirm-reset.');
 }
-const db = createDatabase();
+const db = createDatabase(env, { direct: true });
 try {
   createStorageDirectories();
   await initializeSchema(db);
